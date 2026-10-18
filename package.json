@@ -1,7 +1,7 @@
 {
     "name": "urdimbre",
-    "version": "0.1.0",
-    "description": "Headless OGC client and CQL composer for web maps: canonical URLs, caching, WMS, WFS and WPS.",
+    "version": "0.2.0",
+    "description": "Headless map layer core: OGC client, CQL composer, layer catalog and reconciler for OpenLayers and MapLibre.",
     "keywords": [
         "ogc",
         "wms",
@@ -12,7 +12,11 @@
         "cql",
         "ecql",
         "headless",
-        "gis"
+        "gis",
+        "openlayers",
+        "maplibre",
+        "layers",
+        "reconciler"
     ],
     "license": "AGPL-3.0-only",
     "author": "Edgar Villarreal",
@@ -37,6 +41,22 @@
         "./cql": {
             "types": "./dist/cql/index.d.ts",
             "import": "./dist/cql/index.js"
+        },
+        "./catalog": {
+            "types": "./dist/catalog/index.d.ts",
+            "import": "./dist/catalog/index.js"
+        },
+        "./arbiter": {
+            "types": "./dist/arbiter/index.d.ts",
+            "import": "./dist/arbiter/index.js"
+        },
+        "./ol": {
+            "types": "./dist/ol/index.d.ts",
+            "import": "./dist/ol/index.js"
+        },
+        "./maplibre": {
+            "types": "./dist/maplibre/index.d.ts",
+            "import": "./dist/maplibre/index.js"
         }
     },
     "scripts": {
@@ -46,11 +66,25 @@
         "test": "vitest run",
         "test:watch": "vitest"
     },
+    "peerDependencies": {
+        "maplibre-gl": ">=6",
+        "ol": ">=10"
+    },
+    "peerDependenciesMeta": {
+        "maplibre-gl": {
+            "optional": true
+        },
+        "ol": {
+            "optional": true
+        }
+    },
     "devDependencies": {
         "@npmegar/eslint-config": "^0.4.0",
         "@types/node": "^24.0.0",
         "eslint": "^10.12.0",
         "happy-dom": "^20.14.5",
+        "maplibre-gl": "^6.13.0",
+        "ol": "^10.11.0",
         "typescript": "~6.0.3",
         "typescript-eslint": "^8.71.1",
         "vitest": "^5.0.3"
