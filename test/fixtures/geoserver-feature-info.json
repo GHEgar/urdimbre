@@ -1,0 +1,84 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "states.12",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                -94.4391,
+                34.9291
+              ],
+              [
+                -94.4457,
+                34.7355
+              ],
+              [
+                -94.4524,
+                34.5083
+              ],
+              [
+                -94.4615,
+                34.1967
+              ],
+              [
+                -94.4391,
+                34.9291
+              ]
+            ]
+          ]
+        ]
+      },
+      "geometry_name": "the_geom",
+      "properties": {
+        "STATE_NAME": "Oklahoma",
+        "STATE_FIPS": "40",
+        "SUB_REGION": "W S Cen",
+        "STATE_ABBR": null,
+        "LAND_KM": 177877.536,
+        "WATER_KM": 3170.998,
+        "PERSONS": 3145585,
+        "FAMILIES": 855321,
+        "HOUSHOLD": 1206135,
+        "MALE": 1530819,
+        "FEMALE": 1614766,
+        "WORKERS": 1146497,
+        "DRVALONE": 1078894,
+        "CARPOOL": 190902,
+        "PUBTRANS": 7817,
+        "EMPLOYED": 1369138,
+        "UNEMPLOY": 100931,
+        "SERVICE": null,
+        "MANUAL": 205601,
+        "P_MALE": 0.487,
+        "P_FEMALE": 0.513,
+        "SAMP_POP": 528722
+      },
+      "bbox": [
+        -102.9972,
+        33.621,
+        -94.4283,
+        37.0014
+      ]
+    }
+  ],
+  "totalFeatures": "unknown",
+  "numberReturned": 1,
+  "timeStamp": "2026-10-18T14:45:08.723Z",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:EPSG::4326"
+    }
+  },
+  "bbox": [
+    -102.9972,
+    33.621,
+    -94.4283,
+    37.0014
+  ]
+}

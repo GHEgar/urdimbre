@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WMS_Capabilities xmlns="http://www.opengis.net/wms" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.3.0" updateSequence="35037" xsi:schemaLocation="http://www.opengis.net/wms https://gs-stable.geosolutionsgroup.com/geoserver/schemas/wms/1.3.0/capabilities_1_3_0.xsd">
+  <Service>
+    <Name>WMS</Name>
+    <Title>GeoSolutions gs-stable GeoServer</Title>
+    <Abstract />
+    <KeywordList />
+    <OnlineResource xlink:type="simple" xlink:href="GeoSolutions" />
+    <ContactInformation>
+      <ContactPersonPrimary>
+        <ContactPerson>GeoSolutions</ContactPerson>
+        <ContactOrganization>GeoSolutions</ContactOrganization>
+      </ContactPersonPrimary>
+      <ContactPosition />
+      <ContactAddress>
+        <AddressType />
+        <Address />
+        <City />
+        <StateOrProvince />
+        <PostCode />
+        <Country />
+      </ContactAddress>
+      <ContactVoiceTelephone />
+      <ContactFacsimileTelephone />
+      <ContactElectronicMailAddress>sysadmins@geosolutionsgroup.com</ContactElectronicMailAddress>
+    </ContactInformation>
+    <Fees>none</Fees>
+    <AccessConstraints>none</AccessConstraints>
+  </Service>
+  <Capability>
+    <Request>
+      <GetCapabilities>
+        <Format>text/xml</Format>
+        <DCPType>
+          <HTTP>
+            <Get>
+              <OnlineResource xlink:type="simple" xlink:href="https://gs-stable.geosolutionsgroup.com/geoserver/ows?SERVICE=WMS&amp;" />
+            </Get>
+            <Post>
+              <OnlineResource xlink:type="simple" xlink:href="https://gs-stable.geosolutionsgroup.com/geoserver/ows?SERVICE=WMS&amp;" />
+            </Post>
+          </HTTP>
+        </DCPType>
+      </GetCapabilities>
+      <GetMap>
+        <Format>image/png</Format>
+        <Format>application/atom+xml</Format>
+        <Format>application/geopackage+sqlite3</Format>
+        <Format>application/json;type=utfgrid</Format>
+        <Format>application/pdf</Format>
+        <Format>application/rss+xml</Format>
+        <Format>application/vnd.google-earth.kml+xml</Format>
+        <Format>application/vnd.google-earth.kml+xml;mode=networklink</Format>
+        <Format>application/vnd.google-earth.kmz</Format>
+        <Format>image/bil</Format>
+        <Format>image/dds</Format>
+        <Format>image/geotiff</Format>
+        <Format>image/geotiff8</Format>
+        <Format>image/gif</Format>
+        <Format>image/jpeg</Format>
+        <Format>image/png; mode=8bit</Format>
+        <Format>image/svg+xml</Format>
+        <Format>image/tiff</Format>
+        <Format>image/tiff8</Format>
+        <Format>image/vnd.jpeg-png</Format>
+        <Format>image/vnd.jpeg-png8</Format>
+        <Format>text/html; subtype=openlayers</Format>
+        <Format>text/html; subtype=openlayers2</Format>
+        <Format>text/html; subtype=openlayers3</Format>
+        <DCPType>
+          <HTTP>
+            <Get>
+              <OnlineResource xlink:type="simple" xlink:href="https://gs-stable.geosolutionsgroup.com/geoserver/ows?SERVICE=WMS&amp;" />
+            </Get>
+          </HTTP>
+        </DCPType>
+      </GetMap>
+      <GetFeatureInfo>
+        <Format>text/plain</Format>
+        <Format>application/vnd.ogc.gml</Format>
+        <Format>text/xml</Format>
+        <Format>application/vnd.ogc.gml/3.1.1</Format>
+        <Format>text/xml; subtype=gml/3.1.1</Format>
+        <Format>text/html</Format>
+        <Format>application/json</Format>
+        <DCPType>
+          <HTTP>
+            <Get>
+              <OnlineResource xlink:type="simple" xlink:href="https://gs-stable.geosolutionsgroup.com/geoserver/ows?SERVICE=WMS&amp;" />
+            </Get>
+          </HTTP>
+        </DCPType>
+      </GetFeatureInfo>
+    </Request>
+    <Exception>
+      <Format>XML</Format>
+      <Format>INIMAGE</Format>
+      <Format>BLANK</Format>
+      <Format>JSON</Format>
+    </Exception>
+    <Layer>
+      <Title>GeoSolutions gs-stable GeoServer</Title>
+      <Abstract />
+      
+      <CRS>EPSG:4329</CRS>
+      <CRS>EPSG:3857</CRS>
+      <CRS>EPSG:900913</CRS>
+      <CRS>EPSG:3395</CRS>
+      <CRS>EPSG:4326</CRS>
+      <CRS>EPSG:32122</CRS>
+      <CRS>EPSG:6706</CRS>
+      <CRS>CRS:84</CRS>
+      <EX_GeographicBoundingBox>
+        <westBoundLongitude>-180.0</westBoundLongitude>
+        <eastBoundLongitude>180.00000000007202</eastBoundLongitude>
+        <southBoundLatitude>-177.1944</southBoundLatitude>
+        <northBoundLatitude>178.6907</northBoundLatitude>
+      </EX_GeographicBoundingBox>
+      <BoundingBox CRS="CRS:84" minx="-180.0" miny="-177.1944" maxx="180.00000000007202" maxy="178.6907" />
+      <Layer queryable="1" opaque="0">
+        <Name>mapstore:elevation_test</Name>
+        <Title>elevation_test</Title>
+        <Abstract />
+        <CRS>EPSG:4326</CRS>
+        <CRS>CRS:84</CRS>
+        <EX_GeographicBoundingBox>
+          <westBoundLongitude>-180.0</westBoundLongitude>
+          <eastBoundLongitude>180.0</eastBoundLongitude>
+          <southBoundLatitude>-90.0</southBoundLatitude>
+          <northBoundLatitude>90.0</northBoundLatitude>
+        </EX_GeographicBoundingBox>
+        <BoundingBox CRS="CRS:84" minx="-180.0" miny="-90.0" maxx="180.0" maxy="90.0" />
+        <BoundingBox CRS="EPSG:4326" minx="-90.0" miny="-180.0" maxx="90.0" maxy="180.0" />
+        <Dimension name="elevation" default="100.0" units="EPSG:5030" unitSymbol="m">100.0,200.0,300.0,400.0,1300.0,1400.0</Dimension>
+        <Style>
+          <Name>point</Name>
+          <Title>Default Point</Title>
+          <Abstract>A sample style that draws a point</Abstract>
+          <LegendURL width="20" height="20">
+            <Format>image/png</Format>
+            <OnlineResource xlink:type="simple" xlink:href="https://gs-stable.geosolutionsgroup.com/geoserver/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=mapstore%3Aelevation_test" />
+          </LegendURL>
+        </Style>
+      </Layer>
+      <Layer queryable="1" opaque="0">
+        <Name>topp:states</Name>
+        <Title>states</Title>
+        <Abstract>test description mio</Abstract>
+        <CRS>EPSG:4326</CRS>
+        <CRS>CRS:84</CRS>
+        <EX_GeographicBoundingBox>
+          <westBoundLongitude>-124.73142200000001</westBoundLongitude>
+          <eastBoundLongitude>-66.969849</eastBoundLongitude>
+          <southBoundLatitude>24.955967</southBoundLatitude>
+          <northBoundLatitude>49.371735</northBoundLatitude>
+        </EX_GeographicBoundingBox>
+        <BoundingBox CRS="CRS:84" minx="-124.73142200000001" miny="24.955967" maxx="-66.969849" maxy="49.371735" />
+        <BoundingBox CRS="EPSG:4326" minx="24.955967" miny="-124.73142200000001" maxx="49.371735" maxy="-66.969849" />
+        <Style>
+          <Name>polygon</Name>
+          <Title>A boring default style</Title>
+          <Abstract>A sample style that just prints out a transparent red interior with a red outline</Abstract>
+          <LegendURL width="20" height="20">
+            <Format>image/png</Format>
+            <OnlineResource xlink:type="simple" xlink:href="https://gs-stable.geosolutionsgroup.com/geoserver/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=topp%3Astates" />
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>topp:base_sld___38f42790-defa-11ef-a33c-9588b8df729f</Name>
+          <Title>Base SLD</Title>
+          <LegendURL width="225" height="440">
+            <Format>image/png</Format>
+            <OnlineResource xlink:type="simple" xlink:href="https://gs-stable.geosolutionsgroup.com/geoserver/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=topp%3Astates&amp;style=base_sld___38f42790-defa-11ef-a33c-9588b8df729f" />
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>topp:mio_test___e3042830-62f7-11f0-9c07-250bfb0dbcad</Name>
+          <Title>mio test</Title>
+          <LegendURL width="22" height="40">
+            <Format>image/png</Format>
+            <OnlineResource xlink:type="simple" xlink:href="https://gs-stable.geosolutionsgroup.com/geoserver/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=topp%3Astates&amp;style=mio_test___e3042830-62f7-11f0-9c07-250bfb0dbcad" />
+          </LegendURL>
+        </Style>
+      </Layer>
+      <Layer queryable="1" opaque="0">
+        <Name>geosolutions:storm_obs_test</Name>
+        <Title>storm_obs</Title>
+        <Abstract />
+        <CRS>EPSG:4326</CRS>
+        <CRS>CRS:84</CRS>
+        <EX_GeographicBoundingBox>
+          <westBoundLongitude>-107.7</westBoundLongitude>
+          <eastBoundLongitude>-0.0</eastBoundLongitude>
+          <southBoundLatitude>7.2</southBoundLatitude>
+          <northBoundLatitude>70.7</northBoundLatitude>
+        </EX_GeographicBoundingBox>
+        <BoundingBox CRS="CRS:84" minx="-107.7" miny="7.2" maxx="-0.0" maxy="70.7" />
+        <BoundingBox CRS="EPSG:4326" minx="7.2" miny="-107.7" maxx="70.7" maxy="-0.0" />
+        <Dimension name="time" default="PRESENT" units="ISO8601">1990-07-22T06:00:00.000Z,1990-07-22T12:00:00.000Z,1990-07-22T18:00:00.000Z,1990-07-23T00:00:00.000Z,1990-07-23T06:00:00.000Z,1990-07-23T12:00:00.000Z</Dimension>
+        <Style>
+          <Name>point</Name>
+          <Title>Default Point</Title>
+          <Abstract>A sample style that draws a point</Abstract>
+          <LegendURL width="20" height="20">
+            <Format>image/png</Format>
+            <OnlineResource xlink:type="simple" xlink:href="https://gs-stable.geosolutionsgroup.com/geoserver/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=geosolutions%3Astorm_obs_test" />
+          </LegendURL>
+        </Style>
+      </Layer>
+      </Layer>
+  </Capability>
+</WMS_Capabilities>

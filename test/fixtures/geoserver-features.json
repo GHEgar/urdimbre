@@ -1,0 +1,42 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "states.11",
+      "geometry": null,
+      "properties": {
+        "STATE_NAME": "Arizona",
+        "STATE_ABBR": null,
+        "PERSONS": 3665228
+      },
+      "bbox": [
+        -114.821,
+        31.3355,
+        -109.045,
+        37.0039
+      ]
+    },
+    {
+      "type": "Feature",
+      "id": "states.17",
+      "geometry": null,
+      "properties": {
+        "STATE_NAME": "Arizona",
+        "STATE_ABBR": null,
+        "PERSONS": 4040587
+      },
+      "bbox": [
+        -88.4729,
+        30.2334,
+        -84.8941,
+        35.0159
+      ]
+    }
+  ],
+  "totalFeatures": 49,
+  "numberMatched": 49,
+  "numberReturned": 2,
+  "timeStamp": "2026-10-18T14:45:06.167Z",
+  "crs": null
+}

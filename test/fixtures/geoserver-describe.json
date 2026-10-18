@@ -1,0 +1,218 @@
+{
+  "elementFormDefault": "qualified",
+  "targetNamespace": "http://www.openplans.org/topp",
+  "targetPrefix": "topp",
+  "featureTypes": [
+    {
+      "typeName": "states",
+      "properties": [
+        {
+          "name": "the_geom",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "gml:MultiPolygon",
+          "localType": "MultiPolygon"
+        },
+        {
+          "name": "STATE_NAME",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:string",
+          "localType": "string",
+          "restriction": {}
+        },
+        {
+          "name": "STATE_FIPS",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:string",
+          "localType": "string",
+          "restriction": {}
+        },
+        {
+          "name": "SUB_REGION",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:string",
+          "localType": "string",
+          "restriction": {}
+        },
+        {
+          "name": "STATE_ABBR",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:string",
+          "localType": "string",
+          "restriction": {}
+        },
+        {
+          "name": "LAND_KM",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:number",
+          "localType": "number",
+          "restriction": {}
+        },
+        {
+          "name": "WATER_KM",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:number",
+          "localType": "number",
+          "restriction": {}
+        },
+        {
+          "name": "PERSONS",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:number",
+          "localType": "number",
+          "restriction": {}
+        },
+        {
+          "name": "FAMILIES",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:number",
+          "localType": "number",
+          "restriction": {}
+        },
+        {
+          "name": "HOUSHOLD",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:number",
+          "localType": "number",
+          "restriction": {}
+        },
+        {
+          "name": "MALE",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:number",
+          "localType": "number",
+          "restriction": {}
+        },
+        {
+          "name": "FEMALE",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:number",
+          "localType": "number",
+          "restriction": {}
+        },
+        {
+          "name": "WORKERS",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:number",
+          "localType": "number",
+          "restriction": {}
+        },
+        {
+          "name": "DRVALONE",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:number",
+          "localType": "number",
+          "restriction": {}
+        },
+        {
+          "name": "CARPOOL",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:number",
+          "localType": "number",
+          "restriction": {}
+        },
+        {
+          "name": "PUBTRANS",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:number",
+          "localType": "number",
+          "restriction": {}
+        },
+        {
+          "name": "EMPLOYED",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:number",
+          "localType": "number",
+          "restriction": {}
+        },
+        {
+          "name": "UNEMPLOY",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:number",
+          "localType": "number",
+          "restriction": {}
+        },
+        {
+          "name": "SERVICE",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:number",
+          "localType": "number",
+          "restriction": {}
+        },
+        {
+          "name": "MANUAL",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:number",
+          "localType": "number",
+          "restriction": {}
+        },
+        {
+          "name": "P_MALE",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:number",
+          "localType": "number",
+          "restriction": {}
+        },
+        {
+          "name": "P_FEMALE",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:number",
+          "localType": "number",
+          "restriction": {}
+        },
+        {
+          "name": "SAMP_POP",
+          "maxOccurs": 1,
+          "minOccurs": 0,
+          "nillable": true,
+          "type": "xsd:number",
+          "localType": "number",
+          "restriction": {}
+        }
+      ]
+    }
+  ]
+}

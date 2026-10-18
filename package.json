@@ -1,0 +1,58 @@
+{
+    "name": "urdimbre",
+    "version": "0.1.0",
+    "description": "Headless OGC client and CQL composer for web maps: canonical URLs, caching, WMS, WFS and WPS.",
+    "keywords": [
+        "ogc",
+        "wms",
+        "wfs",
+        "wps",
+        "getcapabilities",
+        "geoserver",
+        "cql",
+        "ecql",
+        "headless",
+        "gis"
+    ],
+    "license": "AGPL-3.0-only",
+    "author": "Edgar Villarreal",
+    "type": "module",
+    "sideEffects": false,
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/GHEgar/urdimbre.git"
+    },
+    "files": [
+        "dist"
+    ],
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        },
+        "./ogc": {
+            "types": "./dist/ogc/index.d.ts",
+            "import": "./dist/ogc/index.js"
+        },
+        "./cql": {
+            "types": "./dist/cql/index.d.ts",
+            "import": "./dist/cql/index.js"
+        }
+    },
+    "scripts": {
+        "build": "rm -rf dist && tsc -p tsconfig.build.json",
+        "typecheck": "tsc -p tsconfig.json --noEmit",
+        "lint": "eslint .",
+        "test": "vitest run",
+        "test:watch": "vitest"
+    },
+    "devDependencies": {
+        "@npmegar/eslint-config": "^0.4.0",
+        "@types/node": "^24.0.0",
+        "eslint": "^10.12.0",
+        "happy-dom": "^20.14.5",
+        "typescript": "~6.0.3",
+        "typescript-eslint": "^8.71.1",
+        "vitest": "^5.0.3"
+    }
+}
