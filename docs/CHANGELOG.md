@@ -3,6 +3,30 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado con
 [SemVer](https://semver.org/lang/es/).
 
+## [0.3.0] - 2026-10-19
+
+### Agregado
+
+- `urdimbre/state`: `encodeState` y `decodeState` con un formato compacto y legible (`v` vista,
+  `l` capas en orden con `!` oculta, `:opacidad` y `~dimensión=valor`, `f` fragmentos CQL por capa y
+  nombre en base64url, `t` herramienta y el resto de la consulta en `extra`); ids desconocidos y
+  partes mal formadas se ignoran sin lanzar.
+- `bindUrl`: aplica la URL inicial, escribe los movimientos del mapa con `replaceState` y debounce
+  (250 ms) y los cambios de capas o herramienta con `pushState`, y aplica `popstate` sin reescribir.
+  Toma `history`, `location` y el destino de `popstate` de las opciones o de `globalThis` al llamarse.
+- `readLayerState` y `applyLayerState`: leen y aplican el estado de capas con los fragmentos de cada
+  compositor CQL.
+- `urdimbre/legend`: `LegendEntry` (`classes`, `ramp`, `image`, `symbols`); `legendFromWms` y
+  `legendUrlFromWms` con un `GetLegendGraphic` canónico que lleva el `TIME`, las dimensiones y el
+  `CQL_FILTER` de la capa; `legendFromClasses` para clases `{ min, max }` o `{ breaks }` con colores y
+  conteos; `legendFromMapLibreStyle` para `step`, `interpolate`, `match` y colores simples;
+  `legendForState` con entradas propias por capa.
+- `urdimbre/identify`: `identify`, iterable asíncrono que agrupa por servicio y valores de dimensión
+  un `GetFeatureInfo` con `QUERY_LAYERS`, `TIME` y un `CQL_FILTER` por capa, entrega cada respuesta en
+  cuanto llega, aísla los errores por servicio, marca `more` al llegar a `featureCount` y se cancela
+  con el `signal` o al salir del ciclo.
+- El paquete raíz reexporta `state`, `legend` e `identify`.
+
 ## [0.2.0] - 2026-10-18
 
 ### Agregado

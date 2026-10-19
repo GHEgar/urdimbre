@@ -7,10 +7,10 @@
 Headless map layer core: OGC client, CQL composer, layer catalog and reconciler for OpenLayers and MapLibre.
 
 urdimbre owns the layers of a web map: the catalog, which layers are on and in what order, their
-opacity, dimensions and `CQL_FILTER` (built from named fragments, so several tools filter one layer
-without overwriting each other), the canonical URL of every request, and which tool gets the click.
-It turns that state into one description per layer and applies the difference to OpenLayers or
-MapLibre. You own the map, the UI and every pixel: no styles, only data, promises and stores.
+opacity, dimensions and `CQL_FILTER` (named fragments, so several tools filter one layer without
+overwriting each other), the canonical URL of every request, which tool gets the click, the state in
+the page URL, the legend and identify. It applies the difference to OpenLayers or MapLibre. You own
+the map, the UI and every pixel: no styles, only data, promises and stores.
 
 ## Install
 
@@ -24,9 +24,12 @@ npm install urdimbre
 | `urdimbre/cql` | `createCqlComposer` and the helpers `and`, `or`, `not`, `inList`, `between`, `bbox`, quoting | nothing |
 | `urdimbre/catalog` | `defineCatalog`, `enrichFromCapabilities`, `createLayerState`, `describe`, `describeState` | nothing |
 | `urdimbre/arbiter` | `createArbiter`: one tool owns the click at a time | nothing |
+| `urdimbre/state` | `encodeState`, `decodeState`, `bindUrl`, `readLayerState`, `applyLayerState` | `history` and `location` for `bindUrl` |
+| `urdimbre/legend` | `legendFromWms`, `legendFromClasses`, `legendFromMapLibreStyle`, `legendForState` | nothing |
+| `urdimbre/identify` | `identify`: progressive, cancelable `GetFeatureInfo` | `fetch` |
 | `urdimbre/ol` | `bindOl`, `bindArbiter` | `ol` 10 |
 | `urdimbre/maplibre` | `bindMapLibre`, `bindArbiter` | a MapLibre GL JS 6 map (types only) |
-| `urdimbre` | `ogc`, `cql`, `catalog` and `arbiter` | as above |
+| `urdimbre` | everything but `ol` and `maplibre` | as above |
 
 ## Quick start
 
@@ -61,21 +64,19 @@ urdimbre speaks plain OGC, with GeoServer as the reference implementation.
 | Feature | Service | Check |
 |---|---|---|
 | `wmsCapabilities`, `enrichFromCapabilities` | WMS 1.3.0 | `?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.3.0` answers XML |
-| `wmsFeatureInfo` | WMS 1.3.0 | `INFO_FORMAT=application/json` is listed in `GetFeatureInfo` |
+| `wmsFeatureInfo`, `identify` | WMS 1.3.0 | `INFO_FORMAT=application/json` is listed in `GetFeatureInfo` |
+| `legendFromWms` | WMS `GetLegendGraphic` | `?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&LAYER=…` answers an image |
 | `wfsDescribe`, `wfsGetFeature`, `wfsHits`, `wfsPages` | WFS 2.0.0 | `DescribeFeatureType` with `OUTPUTFORMAT=application/json` answers JSON |
 | `wpsUnique` | WPS 1.0.0 | `gs:PagedUnique` appears in the WPS `GetCapabilities` |
 
-## Canonical URLs
-
-`canonicalUrl(base, params)` builds every URL, and that URL is the cache key: keys in upper case and
-sorted, no empty, `null` or `undefined` values, lists joined with commas, `BBOX` with up to 6
-decimals, booleans as `true`/`false`, dates as ISO 8601, the query of the base merged (`params` win),
-and commas, colons and slashes left readable.
-
 ## The client
 
+`canonicalUrl(base, params)` builds every URL, and that URL is the cache key: keys in upper case and
+sorted, no empty values, lists joined with commas, `BBOX` with up to 6 decimals, booleans as
+`true`/`false`, dates as ISO 8601, the query of the base merged and `,:/` left readable.
+
 `createOgcClient({ fetch, headers, ttl, maxUrl })` never touches the network when it is created.
-`ttl` defaults to 5 minutes; URLs longer than `maxUrl` (2000) are sent as a form-encoded `POST`.
+`ttl` (5 minutes) keeps an in-memory cache; URLs longer than `maxUrl` (2000) go as a form `POST`.
 Every method takes an `AbortSignal` and rejects with an `OgcError` (`message`, `code`, `status`,
 `url`), also when GeoServer answers an exception with HTTP 200.
 
@@ -88,9 +89,8 @@ Every method takes an `AbortSignal` and rejects with an `OgcError` (`message`, `
 | `wfsHits(url, req)`, `wfsPages(url, req)` | `RESULTTYPE=hits`; an async iterable of pages | no |
 | `wpsUnique(url, typeName, field)` | WPS `gs:PagedUnique`, values as strings | no |
 
-Equal calls share one `fetch`, also while in flight. Layers in `WmsCapabilities` inherit CRS, styles
-and dimensions as WMS 1.3.0 says; `findLayer` and `flattenLayers` walk the tree. GeoServer rejects
-`BBOX` together with `CQL_FILTER`: pass `geometryName` and the box joins the CQL.
+Equal calls share one `fetch`, also while in flight. `findLayer` and `flattenLayers` walk the layer
+tree. GeoServer rejects `BBOX` with `CQL_FILTER`: pass `geometryName` and the box joins the CQL.
 
 ## CQL
 
@@ -115,11 +115,10 @@ missing, even if the CQL filters by date.
 | `dimensions` | `{ time: { default, values } }`; any name, such as `elevation` or `level` |
 | `title`, `abstract`, `tags`, `capabilities`, `attribution`, `bbox`, `legendUrl`, `minZoom`, `maxZoom`, `crossOrigin` | Metadata |
 
-Errors are `CatalogError`s with the `path` of the field, such as `layers[2].wms.layers`; unknown
-fields are errors too. `hash` is FNV-1a over the JSON with sorted keys: the same catalog always has
-the same hash, whatever the key order, so it can be cached as an immutable file.
-`enrichFromCapabilities(catalog, client)` makes one `GetCapabilities` per service and fills title,
-abstract, bbox, dimensions and legend URL without overwriting what the catalog declares.
+Errors are `CatalogError`s with the `path` of the field, such as `layers[2].wms.layers`, also for
+unknown fields. `hash` is FNV-1a over the JSON with sorted keys, so it can key an immutable file.
+`enrichFromCapabilities(catalog, client)` fills title, abstract, bbox, dimensions and legend URL
+from one `GetCapabilities` per service without overwriting what the catalog declares.
 
 ## Layer state
 
@@ -127,9 +126,8 @@ abstract, bbox, dimensions and legend URL without overwriting what the catalog d
 `move(id, to)`, `setOpacity`, `setVisible`, `setDimension(id, name, value)`, `composer(id)`,
 `subscribe` and `getSnapshot`. The snapshot is `{ active, opacity, visible, dimensions, cql }`;
 `active[0]` is the top layer, and records only hold what differs from the defaults (opacity 1,
-visible). Each layer has its own CQL composer, so a table, a legend and a time player add fragments
-to the same layer. `select(selector, listener, equal)` calls `listener` only when the selected value
-changes.
+visible). Each layer has its own CQL composer. `select(selector, listener, equal)` calls `listener`
+only when the selected value changes.
 
 ## Descriptions
 
@@ -139,8 +137,7 @@ changes.
 - WMS is tiled unless the layer says `tiled: false`: `TILED=true`, a fixed tile size and canonical
   parameters. Dimensions go as `TIME`, `ELEVATION` or `DIM_<NAME>`, the layer CQL as `CQL_FILTER`.
 - `zIndex` is `100 + (layers - position) * 10`; tools keep `900`–`999` (`TOOL_Z_MIN`, `TOOL_Z_MAX`).
-- `describeState(catalog, state)` gives the `{ getDescriptions, subscribe }` that the adapters take,
-  computed once per snapshot.
+- `describeState(catalog, state)` gives the `{ getDescriptions, subscribe }` the adapters take.
 
 ## Arbiter
 
@@ -149,6 +146,56 @@ escape })` makes it active and releases the previous tool through its `escape`; 
 releases it. With no tool active, the click goes to the handlers claimed as `IDENTIFY`. `click(e)` and
 `escape()` return whether someone took them. `onEscape(handler)` hangs the arbiter from an outer
 Escape stack while a tool is active. `subscribe` and `getSnapshot()` give `{ active }`.
+
+## URL state
+
+The URL is the state: `encodeState(state, catalog)` writes a `PortalState` (`view`, `layers`,
+`fragments`, `tool`, `extra`) as a short query, and `decodeState(query, catalog)` reads it back.
+
+```text
+v=20.6767,-103.3475,14.2,0,45&l=hex:90,ndvi!~time=2026-10,roads&f=hex~table:UE9QID4gMTA&t=measure
+```
+
+| Key | Holds |
+|---|---|
+| `v` | Latitude, longitude (decimals follow the zoom), zoom (1 decimal), bearing and pitch (integers) |
+| `l` | Active layers, top first; `!` hidden, `:70` opacity in percent, `~name=value` per dimension |
+| `f` | CQL fragments as `layer~name:base64url`, so quotes, accents and `&` survive |
+| `t` | The active tool; any other key goes to `extra` untouched |
+
+Unknown layer ids and malformed parts are skipped, never thrown. `readLayerState(layerState)` gives
+`{ layers, fragments }` with the fragments of every composer, and `applyLayerState(layerState,
+partial)` brings a store to a decoded state with the least calls. `bindUrl({ catalog, read, apply,
+subscribe, history, location, debounce })` applies the URL it starts with, writes map moves with
+`replaceState` after `debounce` (250 ms) and layer or tool changes with `pushState`, so back and
+forward work, and applies `popstate` without writing back. `history`, `location` and the `popstate`
+target (`events`) default to `globalThis` when it is called, never when it is imported.
+
+## Legend
+
+A legend is data, one `LegendEntry` per layer: `classes` (`label`, `color`, `min`, `max`, `count`),
+`ramp` (`stops`), `image` (`url`) or `symbols` (`label`, `color`, `shape`).
+
+- `legendFromWms(description, def, { width, height, format, params })` builds a canonical
+  `GetLegendGraphic` with the same `TIME`, dimensions and `CQL_FILTER` as the layer, so the legend
+  matches what the map shows. Layers that are not WMS use their `legendUrl`.
+- `legendFromClasses(layerId, title, classes, counts, { colors, format })` takes `{ min, max }`
+  classes, such as a hexbin legend, or `{ breaks }`; `counts` fills the histogram.
+- `legendFromMapLibreStyle(layerId, title, layers)` reads `step` as classes, `interpolate` as a ramp,
+  `match` and plain colors as symbols; `metadata['urdimbre:label']` names a style layer.
+- `legendForState(catalog, descriptions, { custom, hidden })` lists the visible layers from the top;
+  `custom(description, def)` returns your own entry for a layer.
+
+## Identify
+
+`identify({ client, catalog, descriptions, at, signal, featureCount, layers })` is an async iterable.
+It sends one `GetFeatureInfo` per WMS service (and per dimension values) for the visible layers with
+the `identify` capability, with `QUERY_LAYERS`, the `TIME` of the layers and one `CQL_FILTER` per
+layer joined with `;`. It yields `{ layerId, features, more }` or `{ layerId, error }` as each answer
+arrives, so one failing service does not hide the others. `at` is `{ coordinate, pixel, resolution,
+size, bbox, crs }` (`EPSG:3857` by default). Aborting `signal`, or leaving the loop, ends the
+iteration and cancels every request. `more` says the answer reached `featureCount` (10): ask again
+with a larger count and `layers: [id]` for that layer only.
 
 ## OpenLayers
 
@@ -174,13 +221,13 @@ It waits for the style and adds its layers again after `setStyle`. `bindArbiter(
 
 ## Known limitations
 
-- WMS capabilities are read for 1.3.0 only and need `DOMParser`; in Node, provide one on `globalThis`.
-- WFS requests are 2.0.0 with JSON output; GML is not parsed. `wpsUnique` needs `gs:PagedUnique`.
+- WMS capabilities are 1.3.0 only and need `DOMParser`. WFS is 2.0.0 with JSON output, never GML.
 - The CQL of a layer reaches WMS and WFS sources only; vector tiles and PMTiles ignore it.
 - OpenLayers has no built-in PMTiles source: pass `createLayer`. MapLibre draws `tiled: false` WMS
   as tiles too, and has no `crossOrigin` per source (use `transformRequest`).
-- Zoom limits are passed as each engine reads them.
-- The cache lives in memory, per client. There is no demo yet.
+- A grouped `GetFeatureInfo` is split by feature id (`states.12` belongs to `topp:states`); features
+  without a matching prefix go to the top layer of the group. Only WMS layers are identified.
+- The URL keeps opacity, dimensions and CQL of the active layers only. There is no demo yet.
 
 ## Development
 
@@ -192,7 +239,7 @@ npm run build
 ```
 
 The tests run on Vitest with happy-dom against trimmed real answers from a public GeoServer and NASA
-GIBS, a real OpenLayers map without a target and a recording MapLibre double.
+GIBS, a real OpenLayers map, a recording MapLibre double and fake `fetch` and `history`.
 
 A `vX.Y.Z` tag that matches `package.json` runs `release.yml`: tests, the GitHub release with that
 version's changelog section, npm with provenance and GitHub Packages.

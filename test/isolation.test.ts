@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const root = process.cwd();
+const CORE = ['src/cql', 'src/ogc', 'src/shared', 'src/catalog', 'src/arbiter', 'src/state', 'src/legend', 'src/identify'];
 
 const read = (folder: string): [string, string][] =>
     readdirSync(`${root}/${folder}`, { withFileTypes: true }).flatMap(entry => (entry.isDirectory()
@@ -25,8 +26,8 @@ afterEach(() => {
 });
 
 describe('isolation', () => {
-    it('keeps ogc, cql, catalog and arbiter free of any package', () => {
-        expect(external(['src/cql', 'src/ogc', 'src/shared', 'src/catalog', 'src/arbiter'], () => false)).toEqual([]);
+    it('keeps the core entries free of any package', () => {
+        expect(external(CORE, () => false)).toEqual([]);
     });
 
     it('lets the OpenLayers adapter import only ol', () => {
@@ -40,11 +41,11 @@ describe('isolation', () => {
     });
 
     it('never imports the adapters from the root entry or the core', () => {
-        const core = sources('src/cql', 'src/ogc', 'src/shared', 'src/catalog', 'src/arbiter')
+        const core = sources(...CORE)
             .flatMap(([file, source]) => imports(source).filter(({ specifier }) => /\/(ol|maplibre)\//.test(specifier)).map(({ specifier }) => `${file}: ${specifier}`));
         const entry = imports(readFileSync(`${root}/src/index.ts`, 'utf8')).map(({ specifier }) => specifier);
         expect(core).toEqual([]);
-        expect(entry).toEqual(['./arbiter/index.js', './catalog/index.js', './cql/index.js', './ogc/index.js']);
+        expect(entry).toEqual(['./arbiter/index.js', './catalog/index.js', './cql/index.js', './identify/index.js', './legend/index.js', './ogc/index.js', './state/index.js']);
     });
 
     it('never names window or document', () => {
@@ -60,6 +61,9 @@ describe('isolation', () => {
         expect(typeof module.createOgcClient).toBe('function');
         expect(typeof module.defineCatalog).toBe('function');
         expect(typeof module.createArbiter).toBe('function');
+        expect(typeof module.bindUrl).toBe('function');
+        expect(typeof module.legendForState).toBe('function');
+        expect(typeof module.identify).toBe('function');
         expect(() => module.parseWmsCapabilities('<WMS_Capabilities/>')).toThrow(/DOMParser is not available/);
     });
 
