@@ -1,4 +1,4 @@
-import { INITIAL_CQL_FRAGMENT } from '../catalog/state.js';
+import { defaultOpacities, defaultOpacity, INITIAL_CQL_FRAGMENT } from '../catalog/state.js';
 import type { LayerState, LayerStateSnapshot } from '../catalog/state.js';
 import type { CqlFragments, PortalState } from './types.js';
 
@@ -26,7 +26,9 @@ export const applyLayerState = (state: LayerState, partial: Pick<Partial<PortalS
         if (!target.active.includes(id)) state.remove(id);
     }
     target.active.forEach((id, index) => state.add(id, index));
-    for (const id of keys(current.opacity, target.opacity)) state.setOpacity(id, target.opacity[id] ?? 1);
+    for (const id of keys(current.opacity, target.opacity, defaultOpacities(state))) {
+        state.setOpacity(id, target.opacity[id] ?? (target.active.includes(id) ? 1 : defaultOpacity(state, id)));
+    }
     for (const id of keys(current.visible, target.visible)) state.setVisible(id, target.visible[id] ?? true);
     for (const id of keys(current.dimensions, target.dimensions)) {
         const wanted = target.dimensions[id] ?? {};

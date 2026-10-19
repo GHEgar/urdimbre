@@ -51,6 +51,8 @@ export interface LayerDef {
     minZoom?: number;
     maxZoom?: number;
     crossOrigin?: CrossOrigin;
+    opacity?: number;
+    metadata?: Readonly<Record<string, unknown>>;
 }
 
 export interface Catalog {

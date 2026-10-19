@@ -25,10 +25,10 @@ npm install urdimbre
 | `urdimbre/catalog` | `defineCatalog`, `enrichFromCapabilities`, `createLayerState`, `describe`, `describeState` | nothing |
 | `urdimbre/arbiter` | `createArbiter`: one tool owns the click at a time | nothing |
 | `urdimbre/state` | `encodeState`, `decodeState`, `bindUrl`, `readLayerState`, `applyLayerState` | `history` and `location` for `bindUrl` |
-| `urdimbre/legend` | `legendFromWms`, `legendFromClasses`, `legendFromMapLibreStyle`, `legendForState` | nothing |
+| `urdimbre/legend` | `legendFromWms`, `legendFromClasses`, `legendFromMapLibreStyle`, `legendForState`, `classFilterCql` | nothing |
 | `urdimbre/identify` | `identify`: progressive, cancelable `GetFeatureInfo` | `fetch` |
 | `urdimbre/ol` | `bindOl`, `bindArbiter` | `ol` 10 |
-| `urdimbre/maplibre` | `bindMapLibre`, `bindArbiter` | a MapLibre GL JS 6 map (types only) |
+| `urdimbre/maplibre` | `bindMapLibre`, `bindArbiter`, `renderedQuery` | a MapLibre GL JS 6 map (types only) |
 | `urdimbre` | everything but `ol` and `maplibre` | as above |
 
 ## Quick start
@@ -100,7 +100,8 @@ fragment)` (blank removes it), `get`, `names`, `compose()` (joined with `AND`, o
 alphabetically, so the same state always gives the same string. The helpers `quoteIdentifier`,
 `quoteLiteral`, `escapeLike`, `and`, `or`, `not`, `inList`, `between` and `bbox` drop empty parts.
 Keep dates of a `TIME` dimension out of the CQL: GeoServer applies the default time when `TIME` is
-missing, even if the CQL filters by date.
+missing, even if the CQL filters by date. `bbox(field, box, srs, { axisOrder })` writes `box` as given
+(`'lonlat'`); GeoServer may read `EPSG:4326` latitude first: pass `'latlon'`, or use `CRS:84`.
 
 ## Catalog
 
@@ -113,21 +114,22 @@ missing, even if the CQL filters by date.
 | `tiles` | `{ url, sourceLayer }`, required for `vector-tiles`, `pmtiles` and `xyz` |
 | `data`, `wfs` | Inline GeoJSON or its URL, or `{ url, typeName, geometryName, idField }`; one is required for `geojson` |
 | `dimensions` | `{ time: { default, values } }`; any name, such as `elevation` or `level` |
+| `opacity` | Starting opacity (0–1), used when the initial state gives none |
+| `metadata` | A free object for your app (thumbnails, skins): never checked inside, part of the `hash` |
 | `title`, `abstract`, `tags`, `capabilities`, `attribution`, `bbox`, `legendUrl`, `minZoom`, `maxZoom`, `crossOrigin` | Metadata |
 
-Errors are `CatalogError`s with the `path` of the field, such as `layers[2].wms.layers`, also for
-unknown fields. `hash` is FNV-1a over the JSON with sorted keys, so it can key an immutable file.
-`enrichFromCapabilities(catalog, client)` fills title, abstract, bbox, dimensions and legend URL
-from one `GetCapabilities` per service without overwriting what the catalog declares.
+Errors are `CatalogError`s with the field `path` (`layers[2].wms.layers`), also for unknown fields.
+`hash` is FNV-1a over the JSON with sorted keys. `enrichFromCapabilities(catalog, client)` fills
+title, abstract, bbox, dimensions and legend URL from one `GetCapabilities` per service, never over
+what the catalog declares.
 
 ## Layer state
 
 `createLayerState(catalog, initial, { cqlOrder })` is a store with `add(id, at)`, `remove`,
-`move(id, to)`, `setOpacity`, `setVisible`, `setDimension(id, name, value)`, `composer(id)`,
-`subscribe` and `getSnapshot`. The snapshot is `{ active, opacity, visible, dimensions, cql }`;
-`active[0]` is the top layer, and records only hold what differs from the defaults (opacity 1,
-visible). Each layer has its own CQL composer. `select(selector, listener, equal)` calls `listener`
-only when the selected value changes.
+`move(id, to)`, `setOpacity`, `setVisible`, `setDimension(id, name, value)`, `composer(id)` (one CQL
+composer per layer), `subscribe`, `getSnapshot` and `select(selector, listener, equal)`, which calls
+`listener` only when the selected value changes. The snapshot is `{ active, opacity, visible,
+dimensions, cql }`; `active[0]` is the top layer, and records skip opacity 1 and visible layers.
 
 ## Descriptions
 
@@ -143,9 +145,9 @@ only when the selected value changes.
 
 `createArbiter({ onEscape })` gives the map click to one tool at a time. `claim(tool, { click,
 escape })` makes it active and releases the previous tool through its `escape`; the returned function
-releases it. With no tool active, the click goes to the handlers claimed as `IDENTIFY`. `click(e)` and
-`escape()` return whether someone took them. `onEscape(handler)` hangs the arbiter from an outer
-Escape stack while a tool is active. `subscribe` and `getSnapshot()` give `{ active }`.
+releases it. With no tool active, the click goes to `IDENTIFY`. `click(e)` and `escape()` return
+whether someone took them; `onEscape(handler)` hangs it from an outer Escape stack while a tool is
+active. `subscribe` and `getSnapshot()` give `{ active }`.
 
 ## URL state
 
@@ -164,12 +166,12 @@ v=20.6767,-103.3475,14.2,0,45&l=hex:90,ndvi!~time=2026-10,roads&f=hex~table:UE9Q
 | `t` | The active tool; any other key goes to `extra` untouched |
 
 Unknown layer ids and malformed parts are skipped, never thrown. `readLayerState(layerState)` gives
-`{ layers, fragments }` with the fragments of every composer, and `applyLayerState(layerState,
-partial)` brings a store to a decoded state with the least calls. `bindUrl({ catalog, read, apply,
-subscribe, history, location, debounce })` applies the URL it starts with, writes map moves with
-`replaceState` after `debounce` (250 ms) and layer or tool changes with `pushState`, so back and
-forward work, and applies `popstate` without writing back. `history`, `location` and the `popstate`
-target (`events`) default to `globalThis` when it is called, never when it is imported.
+`{ layers, fragments }`; `applyLayerState(layerState, partial)` brings a store to a decoded state
+with the least calls, and layers the URL leaves out go back to their catalog `opacity`.
+`bindUrl({ catalog, read, apply, subscribe, history, location, debounce })` applies the starting URL,
+writes map moves with `replaceState` after `debounce` (250 ms) and layer or tool changes with
+`pushState`, and applies `popstate` without writing back. `history`, `location` and `events` (the
+`popstate` target) default to `globalThis` when it is called, never when it is imported.
 
 ## Legend
 
@@ -177,25 +179,29 @@ A legend is data, one `LegendEntry` per layer: `classes` (`label`, `color`, `min
 `ramp` (`stops`), `image` (`url`) or `symbols` (`label`, `color`, `shape`).
 
 - `legendFromWms(description, def, { width, height, format, params })` builds a canonical
-  `GetLegendGraphic` with the same `TIME`, dimensions and `CQL_FILTER` as the layer, so the legend
-  matches what the map shows. Layers that are not WMS use their `legendUrl`.
+  `GetLegendGraphic` with the `TIME`, dimensions and `CQL_FILTER` of the layer; others use `legendUrl`.
 - `legendFromClasses(layerId, title, classes, counts, { colors, format })` takes `{ min, max }`
   classes, such as a hexbin legend, or `{ breaks }`; `counts` fills the histogram.
 - `legendFromMapLibreStyle(layerId, title, layers)` reads `step` as classes, `interpolate` as a ramp,
   `match` and plain colors as symbols; `metadata['urdimbre:label']` names a style layer.
+- `classFilterCql(field, classes, visible, { lastInclusive })` turns the visible class indexes into a
+  CQL fragment: `null` when all are visible, `EXCLUDE` when none, one range per class otherwise.
+  `classesFromCql(fragment, field, classes)` reads the selection back, or `null` for foreign CQL.
 - `legendForState(catalog, descriptions, { custom, hidden })` lists the visible layers from the top;
   `custom(description, def)` returns your own entry for a layer.
 
 ## Identify
 
-`identify({ client, catalog, descriptions, at, signal, featureCount, layers })` is an async iterable.
-It sends one `GetFeatureInfo` per WMS service (and per dimension values) for the visible layers with
-the `identify` capability, with `QUERY_LAYERS`, the `TIME` of the layers and one `CQL_FILTER` per
-layer joined with `;`. It yields `{ layerId, features, more }` or `{ layerId, error }` as each answer
-arrives, so one failing service does not hide the others. `at` is `{ coordinate, pixel, resolution,
-size, bbox, crs }` (`EPSG:3857` by default). Aborting `signal`, or leaving the loop, ends the
-iteration and cancels every request. `more` says the answer reached `featureCount` (10): ask again
-with a larger count and `layers: [id]` for that layer only.
+`identify({ client, catalog, descriptions, at, signal, featureCount, layers, tolerance, query })`
+yields `{ layerId, features, more }` or `{ layerId, error }` for each visible layer with `identify`
+as soon as it is known; aborting `signal` or leaving the loop cancels every request.
+
+- WMS: one `GetFeatureInfo` per service and dimension values, with `QUERY_LAYERS`, `TIME` and one
+  `CQL_FILTER` per layer joined with `;`. `at` is `{ coordinate, pixel, resolution, size, bbox, crs }`.
+  `more` says `featureCount` (10) was reached: ask again with a larger count and `layers: [id]`.
+- GeoJSON, vector tiles and PMTiles answer first: `query(layerId, at, tolerance)` returns what is
+  drawn under the pointer; on `null`, inline GeoJSON is hit locally within `tolerance` px (5) from
+  `coordinate` and `resolution` in `EPSG:3857` (the default) or `EPSG:4326`.
 
 ## OpenLayers
 
@@ -209,15 +215,15 @@ returns your own layer for a description, which PMTiles needs. `bindArbiter(map,
 
 ## MapLibre
 
-`bindMapLibre(map, source, { layers, beforeId })` takes any object with the `MapLibreMapLike` methods
-and never imports `maplibre-gl` at run time. WMS becomes a `raster` source whose tile URL is
-canonical up to `&BBOX={bbox-epsg-3857}`; vector tiles and PMTiles become `vector` sources (register
-the `pmtiles://` protocol yourself) and GeoJSON a `geojson` source. When a `key` changes it calls
-`setTiles` or `setData` if the source has them and replaces the source otherwise. Order uses
-`moveLayer` below `beforeId`; opacity uses `raster-opacity` and its equivalents; visibility uses
-`visibility`. `layers(description)` returns the style layers for vector data (a `line` by default).
-It waits for the style and adds its layers again after `setStyle`. `bindArbiter(map, arbiter)` turns
-`click` into a pointer.
+`bindMapLibre(map, source, { layers, beforeId })` takes any `MapLibreMapLike` and never imports
+`maplibre-gl` at run time. WMS becomes a `raster` source canonical up to `&BBOX={bbox-epsg-3857}`,
+vector tiles and PMTiles `vector` sources (register `pmtiles://` yourself), GeoJSON a `geojson` one.
+A new `key` calls `setTiles` (only for a new template) or `setData`, or replaces the source in its
+place. Through `getLayersOrder` it moves only its own layers that are out of order, below `beforeId`,
+so foreign layers in between (deck.gl interleaved) stay put. `layers(description)` gives the style
+layers for vector data (a `line` by default); opacity and `visibility` are paint and layout
+properties. It waits for the style and adds its layers again after `setStyle`. `bindArbiter(map,
+arbiter)` turns `click` into a pointer; `renderedQuery(map)` is the `query` for `identify`.
 
 ## Known limitations
 
@@ -225,8 +231,8 @@ It waits for the style and adds its layers again after `setStyle`. `bindArbiter(
 - The CQL of a layer reaches WMS and WFS sources only; vector tiles and PMTiles ignore it.
 - OpenLayers has no built-in PMTiles source: pass `createLayer`. MapLibre draws `tiled: false` WMS
   as tiles too, and has no `crossOrigin` per source (use `transformRequest`).
-- A grouped `GetFeatureInfo` is split by feature id (`states.12` belongs to `topp:states`); features
-  without a matching prefix go to the top layer of the group. Only WMS layers are identified.
+- A grouped `GetFeatureInfo` is split by feature id (`states.12` is `topp:states`), else to the top
+  layer. Without `query`, only WMS and inline GeoJSON are identified.
 - The URL keeps opacity, dimensions and CQL of the active layers only. There is no demo yet.
 
 ## Development
@@ -238,11 +244,9 @@ npm run typecheck
 npm run build
 ```
 
-The tests run on Vitest with happy-dom against trimmed real answers from a public GeoServer and NASA
-GIBS, a real OpenLayers map, a recording MapLibre double and fake `fetch` and `history`.
-
-A `vX.Y.Z` tag that matches `package.json` runs `release.yml`: tests, the GitHub release with that
-version's changelog section, npm with provenance and GitHub Packages.
+Vitest with happy-dom runs against trimmed real answers from a public GeoServer and NASA GIBS, a real
+OpenLayers map, a recording MapLibre double and fake `fetch` and `history`. A `vX.Y.Z` tag matching
+`package.json` runs `release.yml`: tests, a GitHub release with its changelog, npm and GitHub Packages.
 
 ## Contributing
 

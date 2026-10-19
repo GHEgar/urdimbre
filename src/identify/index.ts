@@ -1,2 +1,2 @@
-export { DEFAULT_FEATURE_COUNT, identify } from './identify.js';
-export type { IdentifyOptions, IdentifyPoint, IdentifyResult } from './identify.js';
+export { DEFAULT_FEATURE_COUNT, DEFAULT_TOLERANCE, identify } from './identify.js';
+export type { IdentifyOptions, IdentifyPoint, IdentifyQuery, IdentifyResult } from './identify.js';

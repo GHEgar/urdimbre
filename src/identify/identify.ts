@@ -2,6 +2,7 @@ import type { LayerDescription, WmsImageSource, WmsTilesSource } from '../catalo
 import type { Catalog } from '../catalog/types.js';
 import type { OgcClient } from '../ogc/client.js';
 import type { Extent, Feature, FeatureCollection } from '../ogc/types.js';
+import { hitFeatures } from './local.js';
 
 export interface IdentifyPoint {
     coordinate: [number, number];
@@ -12,6 +13,12 @@ export interface IdentifyPoint {
     crs?: string;
 }
 
+export type IdentifyQuery = (
+    layerId: string,
+    at: IdentifyPoint,
+    tolerance: number,
+) => readonly Feature[] | null | undefined | Promise<readonly Feature[] | null | undefined>;
+
 export interface IdentifyOptions {
     client: OgcClient;
     catalog: Catalog;
@@ -20,6 +27,8 @@ export interface IdentifyOptions {
     signal?: AbortSignal;
     featureCount?: number;
     layers?: readonly string[];
+    tolerance?: number;
+    query?: IdentifyQuery;
 }
 
 export type IdentifyResult =
@@ -41,6 +50,10 @@ interface Group {
 
 export const DEFAULT_FEATURE_COUNT = 10;
 
+export const DEFAULT_TOLERANCE = 5;
+
+const VECTOR = new Set(['geojson', 'vector-tiles', 'pmtiles']);
+
 const LAYER_PARAMS = new Set(['LAYERS', 'STYLES', 'CQL_FILTER', 'FORMAT', 'TRANSPARENT', 'TILED', 'VERSION']);
 
 const isWms = (source: LayerDescription['source']): source is WmsTilesSource | WmsImageSource =>
@@ -49,10 +62,8 @@ const isWms = (source: LayerDescription['source']): source is WmsTilesSource | W
 const groupLayers = (options: IdentifyOptions): Group[] => {
     const groups = new Map<string, Group>();
     for (const description of options.descriptions) {
-        const def = options.catalog.get(description.id);
         const { source } = description;
-        if (!def || !description.visible || !isWms(source) || !def.capabilities?.includes('identify')) continue;
-        if (options.layers && !options.layers.includes(description.id)) continue;
+        if (!isWms(source) || !wanted(options, description)) continue;
         const shared = Object.fromEntries(Object.entries(source.params).filter(([key]) => !LAYER_PARAMS.has(key)));
         const key = JSON.stringify([source.url, source.params.VERSION ?? null, shared]);
         const group = groups.get(key) ?? { url: source.url, shared, members: [] };
@@ -60,6 +71,30 @@ const groupLayers = (options: IdentifyOptions): Group[] => {
         groups.set(key, group);
     }
     return [...groups.values()];
+};
+
+const wanted = (options: IdentifyOptions, description: LayerDescription): boolean => {
+    const def = options.catalog.get(description.id);
+    if (!def || !description.visible || !def.capabilities?.includes('identify')) return false;
+    return !options.layers || options.layers.includes(description.id);
+};
+
+const failed = (layerId: string, caught: unknown): IdentifyResult =>
+    ({ layerId, error: caught instanceof Error ? caught : new Error(String(caught)) });
+
+const vector = async (description: LayerDescription, options: IdentifyOptions, featureCount: number): Promise<IdentifyResult[]> => {
+    const tolerance = options.tolerance ?? DEFAULT_TOLERANCE;
+    const { id, source } = description;
+    try {
+        const queried = await options.query?.(id, options.at, tolerance);
+        const inline = source.type === 'geojson' && source.data !== undefined ? source.data : undefined;
+        const found = queried ?? (inline === undefined ? undefined : hitFeatures(inline, options.at, tolerance));
+        if (found === undefined) return [];
+        if (found === null) throw new RangeError(`Cannot identify ${id} in ${options.at.crs ?? 'EPSG:3857'}`);
+        return [{ layerId: id, features: found.slice(0, featureCount), more: found.length > featureCount }];
+    } catch (caught) {
+        return [failed(id, caught)];
+    }
 };
 
 const localName = (name: string): string => name.split(',')[0]?.split(':').pop()?.trim() ?? '';
@@ -101,8 +136,7 @@ const request = async (group: Group, options: IdentifyOptions, featureCount: num
         return split(group, collection, featureCount);
     } catch (caught) {
         if (signal.aborted) return [];
-        const error = caught instanceof Error ? caught : new Error(String(caught));
-        return group.members.map(member => ({ layerId: member.id, error }));
+        return group.members.map(member => failed(member.id, caught));
     }
 };
 
@@ -114,10 +148,11 @@ export const identify = (options: IdentifyOptions): AsyncIterable<IdentifyResult
         options.signal?.addEventListener('abort', abort, { once: true });
         const featureCount = options.featureCount ?? DEFAULT_FEATURE_COUNT;
         const stopped = new Promise<null>(resolve => controller.signal.addEventListener('abort', () => resolve(null), { once: true }));
-        const pending = new Map(groupLayers(options).map((group, index) => [
-            index,
-            request(group, options, featureCount, controller.signal).then(results => ({ index, results })),
-        ]));
+        const tasks = [
+            ...options.descriptions.filter(item => VECTOR.has(item.source.type) && wanted(options, item)).map(item => vector(item, options, featureCount)),
+            ...groupLayers(options).map(group => request(group, options, featureCount, controller.signal)),
+        ];
+        const pending = new Map(tasks.map((task, index) => [index, task.then(results => ({ index, results }))]));
         try {
             while (pending.size > 0 && !controller.signal.aborted) {
                 const settled = await Promise.race([stopped, ...pending.values()]);

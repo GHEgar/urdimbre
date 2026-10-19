@@ -1,5 +1,7 @@
 export { legendFromClasses } from './classes.js';
 export type { ClassesOptions, ClassLike } from './classes.js';
+export { classesFromCql, classFilterCql } from './filter.js';
+export type { ClassBounds, ClassesInput, ClassFilterOptions } from './filter.js';
 export { legendFromMapLibreStyle } from './maplibre.js';
 export { legendForState } from './state.js';
 export type { LegendForStateOptions } from './state.js';

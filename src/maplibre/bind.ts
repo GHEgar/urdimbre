@@ -1,6 +1,7 @@
 import type { LayerSpecification, SourceSpecification } from 'maplibre-gl';
 import type { LayerDescription } from '../catalog/describe.js';
 import type { DescriptionSource } from '../catalog/observe.js';
+import { nextAbove, planMoves } from './order.js';
 import { defaultTemplates, layerSpecs, opacityPaint, PREFIX, sourceSpec, tileUrls } from './specs.js';
 import type { LayerTemplate } from './specs.js';
 
@@ -19,6 +20,7 @@ export interface MapLibreMapLike {
     on(type: MapLibreEventName, listener: (event: unknown) => void): unknown;
     off(type: MapLibreEventName, listener: (event: unknown) => void): unknown;
     isStyleLoaded?(): unknown;
+    getLayersOrder?(): string[];
 }
 
 export interface BindMapLibreOptions {
@@ -34,9 +36,13 @@ interface Entry {
 }
 
 interface LiveSource {
+    tiles?: unknown;
     setTiles?(tiles: string[]): unknown;
     setData?(data: unknown): unknown;
 }
+
+const sameTiles = (current: unknown, next: readonly string[]): boolean =>
+    Array.isArray(current) && current.length === next.length && current.every((url, index) => url === next[index]);
 
 const sameZoom = (a: LayerDescription, b: LayerDescription): boolean => a.minZoom === b.minZoom && a.maxZoom === b.maxZoom;
 
@@ -47,14 +53,24 @@ export const bindMapLibre = (map: MapLibreMapLike, input: DescriptionSource, opt
     let ready = styleReady();
     let pending = !ready;
 
-    const add = (description: LayerDescription): Entry => {
+    const anchor = (): string | undefined => (options.beforeId !== undefined && map.getLayer(options.beforeId) ? options.beforeId : undefined);
+
+    const add = (description: LayerDescription, before?: string): Entry => {
         const sourceId = `${PREFIX}${description.id}`;
         const templates = options.layers?.(description) ?? defaultTemplates(description);
         const layers = layerSpecs(description, templates, sourceId);
         map.addSource(sourceId, sourceSpec(description.source));
         order = [];
-        for (const layer of layers) map.addLayer(layer, options.beforeId !== undefined && map.getLayer(options.beforeId) ? options.beforeId : undefined);
+        const at = before !== undefined && map.getLayer(before) ? before : anchor();
+        for (const layer of layers) map.addLayer(layer, at);
         return { description, sourceId, templates, layers };
+    };
+
+    const replace = (entry: Entry, description: LayerDescription): Entry => {
+        const style = map.getLayersOrder?.();
+        const before = style ? nextAbove(style, entry.layers.map(layer => layer.id)) : undefined;
+        drop(entry);
+        return add(description, before);
     };
 
     const drop = (entry: Entry): void => {
@@ -68,7 +84,7 @@ export const bindMapLibre = (map: MapLibreMapLike, input: DescriptionSource, opt
         if (!source || previous.type !== next.source.type || previous.attribution !== next.source.attribution) return false;
         const tiles = tileUrls(next.source);
         if (tiles && source.setTiles && (previous.type !== 'wms-tiles' || next.source.type !== 'wms-tiles' || previous.tileSize === next.source.tileSize)) {
-            source.setTiles(tiles);
+            if (!sameTiles(source.tiles, tiles)) source.setTiles(tiles);
             return true;
         }
         if (next.source.type === 'geojson' && source.setData) {
@@ -92,8 +108,14 @@ export const bindMapLibre = (map: MapLibreMapLike, input: DescriptionSource, opt
         const wanted = [...entries.values()]
             .sort((a, b) => a.description.zIndex - b.description.zIndex)
             .flatMap(entry => entry.layers.map(layer => layer.id));
+        const style = map.getLayersOrder?.();
+        if (style) {
+            for (const [id, before] of planMoves(wanted, style, anchor())) map.moveLayer(id, before);
+            order = wanted;
+            return;
+        }
         if (wanted.length === order.length && wanted.every((id, index) => id === order[index])) return;
-        let above = options.beforeId !== undefined && map.getLayer(options.beforeId) ? options.beforeId : undefined;
+        let above = anchor();
         for (const id of [...wanted].reverse()) {
             map.moveLayer(id, above);
             above = id;
@@ -112,8 +134,7 @@ export const bindMapLibre = (map: MapLibreMapLike, input: DescriptionSource, opt
             }
             if (entry.description.key !== description.key || !sameZoom(entry.description, description)) {
                 if (!sameZoom(entry.description, description) || !updateSource(entry, description)) {
-                    drop(entry);
-                    entries.set(description.id, add(description));
+                    entries.set(description.id, replace(entry, description));
                     continue;
                 }
             }

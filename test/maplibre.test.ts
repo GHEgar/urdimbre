@@ -52,10 +52,78 @@ describe('bindMapLibre', () => {
         const { state, calls, sources, ids } = setup(['states', 'osm']);
         calls.length = 0;
         state.composer('states').set('table', 'PERSONS > 1');
-        expect(calls.map(call => call[0])).toEqual(['removeLayer', 'removeSource', 'addSource', 'addLayer', 'moveLayer', 'moveLayer']);
+        expect(calls.map(call => call[0])).toEqual(['removeLayer', 'removeSource', 'addSource', 'addLayer']);
         const tiles = (sources.get('urdimbre:states') as { tiles: string[] }).tiles[0] as string;
         expect(query(tiles.replace('{bbox-epsg-3857}', '0')).CQL_FILTER).toBe('PERSONS > 1');
         expect(ids()).toEqual(['urdimbre:osm', 'urdimbre:states']);
+    });
+
+    it('moves every layer below the top when the map cannot list its layers', () => {
+        const { state, calls, ids } = setup(['states', 'osm'], { ordered: false });
+        calls.length = 0;
+        state.composer('states').set('table', 'PERSONS > 1');
+        expect(calls.map(call => call[0])).toEqual(['removeLayer', 'removeSource', 'addSource', 'addLayer', 'moveLayer', 'moveLayer']);
+        expect(ids()).toEqual(['urdimbre:osm', 'urdimbre:states']);
+    });
+
+    it('adds a replaced source back in its place', () => {
+        const { state, named, ids } = setup(['osm', 'states', 'roads']);
+        const moves = named('moveLayer').length;
+        state.composer('states').set('table', 'PERSONS > 1');
+        expect(ids()).toEqual(['urdimbre:roads', 'urdimbre:states', 'urdimbre:osm']);
+        expect(named('addLayer').at(-1)?.[2]).toBe('urdimbre:osm');
+        expect(named('moveLayer')).toHaveLength(moves);
+    });
+
+    it('never moves foreign layers and keeps them between its own', () => {
+        const { map, state, named, ids, calls } = setup(['osm', 'states', 'roads']);
+        map.addLayer({ id: 'deck', type: 'background' }, 'urdimbre:osm');
+        expect(ids()).toEqual(['urdimbre:roads', 'urdimbre:states', 'deck', 'urdimbre:osm']);
+        calls.length = 0;
+        state.move('roads', 0);
+        expect(named('moveLayer')).toEqual([['moveLayer', 'urdimbre:roads', undefined]]);
+        expect(ids()).toEqual(['urdimbre:states', 'deck', 'urdimbre:osm', 'urdimbre:roads']);
+        state.move('osm', 2);
+        expect(ids()).toEqual(['deck', 'urdimbre:osm', 'urdimbre:states', 'urdimbre:roads']);
+        expect(named('moveLayer').map(call => call[1])).toEqual(['urdimbre:roads', 'urdimbre:states']);
+        state.add('points');
+        expect(ids()).toEqual(['deck', 'urdimbre:osm', 'urdimbre:states', 'urdimbre:roads', 'urdimbre:points']);
+    });
+
+    it('keeps its block below beforeId even with foreign layers in between', () => {
+        const double = createDouble();
+        double.map.addLayer({ id: 'labels', type: 'background' });
+        const state = createLayerState(catalog, { active: ['states', 'osm'] });
+        bindMapLibre(double.map, describeState(catalog, state), { beforeId: 'labels' });
+        double.map.addLayer({ id: 'deck', type: 'background' }, 'urdimbre:states');
+        state.move('osm', 0);
+        expect(double.layers.map(layer => layer.id)).toEqual(['deck', 'urdimbre:states', 'urdimbre:osm', 'labels']);
+        expect(double.named('moveLayer').at(-1)).toEqual(['moveLayer', 'urdimbre:osm', 'labels']);
+    });
+
+    it('does not call setTiles when the source already has that template', () => {
+        const double = createDouble({ live: true });
+        const state = createLayerState(catalog, { active: ['states'] });
+        const base = describeState(catalog, state);
+        let salt = 0;
+        const listeners = new Set<() => void>();
+        bindMapLibre(double.map, {
+            getDescriptions: () => base.getDescriptions().map(description => ({ ...description, key: `${description.key}#${salt}` })),
+            subscribe: (listener) => {
+                listeners.add(listener);
+                return () => listeners.delete(listener);
+            },
+        });
+        double.calls.length = 0;
+        salt = 1;
+        for (const listener of listeners) listener();
+        expect(double.calls).toEqual([]);
+        state.composer('states').set('table', 'PERSONS > 1');
+        salt = 2;
+        for (const listener of listeners) listener();
+        expect(double.named('setTiles')).toHaveLength(1);
+        for (const listener of listeners) listener();
+        expect(double.named('setTiles')).toHaveLength(1);
     });
 
     it('uses setTiles and setData when the source has them', () => {

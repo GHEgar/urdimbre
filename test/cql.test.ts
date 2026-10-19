@@ -90,4 +90,12 @@ describe('bbox', () => {
             .toBe("BBOX(the_geom, -103.123457, 20.5, -102, 21, 'EPSG:4326')");
         expect(bbox('geom', [0, 0, 1, 1])).toBe('BBOX(geom, 0, 0, 1, 1)');
     });
+
+    it('writes the box as given by default and swaps the axes for latlon', () => {
+        const box = [-104, 20, -103, 21] as const;
+        expect(bbox('geom', box, 'EPSG:4326', { axisOrder: 'lonlat' })).toBe(bbox('geom', box, 'EPSG:4326'));
+        expect(bbox('geom', box, 'EPSG:4326')).toBe("BBOX(geom, -104, 20, -103, 21, 'EPSG:4326')");
+        expect(bbox('geom', box, 'EPSG:4326', { axisOrder: 'latlon' })).toBe("BBOX(geom, 20, -104, 21, -103, 'EPSG:4326')");
+        expect(bbox('geom', box, undefined, { axisOrder: 'latlon' })).toBe('BBOX(geom, 20, -104, 21, -103)');
+    });
 });

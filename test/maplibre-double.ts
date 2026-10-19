@@ -4,6 +4,7 @@ import type { MapLibreEventName, MapLibreMapLike } from '../src/maplibre/index.j
 export interface DoubleOptions {
     live?: boolean;
     loaded?: boolean;
+    ordered?: boolean;
 }
 
 export const createDouble = (options: DoubleOptions = {}) => {
@@ -20,7 +21,10 @@ export const createDouble = (options: DoubleOptions = {}) => {
             if (!loaded) throw new Error('Style is not done loading');
             const live = { ...source } as SourceSpecification & { setTiles?(tiles: string[]): void; setData?(data: unknown): void };
             if (options.live) {
-                live.setTiles = tiles => calls.push(['setTiles', id, tiles]);
+                live.setTiles = (tiles) => {
+                    calls.push(['setTiles', id, tiles]);
+                    (live as { tiles?: string[] }).tiles = tiles;
+                };
                 live.setData = data => calls.push(['setData', id, data]);
             }
             sources.set(id, live);
@@ -59,6 +63,7 @@ export const createDouble = (options: DoubleOptions = {}) => {
         },
         isStyleLoaded: () => loaded,
     };
+    if (options.ordered !== false) map.getLayersOrder = () => layers.map(layer => layer.id);
     const fire = (type: MapLibreEventName, event: unknown = {}): void => {
         for (const listener of handlers.get(type) ?? []) listener(event);
     };

@@ -29,6 +29,12 @@ export interface LayerStateOptions {
 
 export const INITIAL_CQL_FRAGMENT = 'base';
 
+const defaults = new WeakMap<LayerState, Readonly<Record<string, number>>>();
+
+export const defaultOpacities = (state: LayerState): Readonly<Record<string, number>> => defaults.get(state) ?? {};
+
+export const defaultOpacity = (state: LayerState, id: string): number => defaultOpacities(state)[id] ?? 1;
+
 const without = <T>(record: Readonly<Record<string, T>>, key: string): Readonly<Record<string, T>> => {
     if (!(key in record)) return record;
     return Object.freeze(Object.fromEntries(Object.entries(record).filter(([name]) => name !== key)));
@@ -134,6 +140,11 @@ export const createLayerState = (catalog: Catalog, initial: Partial<LayerStateSn
         },
     };
 
+    const declared = Object.fromEntries(catalog.layers.flatMap(layer => (layer.opacity === undefined ? [] : [[layer.id, layer.opacity]])));
+    defaults.set(state, Object.freeze(declared));
+    for (const [id, value] of Object.entries(declared)) {
+        if (initial.opacity?.[id] === undefined) state.setOpacity(id, value);
+    }
     for (const [id, value] of Object.entries(initial.opacity ?? {})) state.setOpacity(id, value);
     for (const [id, value] of Object.entries(initial.visible ?? {})) state.setVisible(id, value);
     for (const [id, values] of Object.entries(initial.dimensions ?? {})) {

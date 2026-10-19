@@ -3,6 +3,36 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado con
 [SemVer](https://semver.org/lang/es/).
 
+## [0.4.0] - 2026-10-19
+
+### Agregado
+
+- `LayerDef.metadata`: objeto libre para la app (miniaturas, piel); se valida que sea objeto, no se
+  revisa por dentro, se congela y entra en el `hash`.
+- `LayerDef.opacity` (0–1): opacidad inicial que `createLayerState` usa si el estado inicial no trae
+  otra; `applyLayerState` la restituye a las capas que la URL deja fuera.
+- `urdimbre/legend`: `classFilterCql(field, classes, visible, { lastInclusive })` convierte las clases
+  visibles (`{ min, max }`, `LegendClass` o `{ breaks }`) en un fragmento CQL (`null` con todas,
+  `EXCLUDE` sin ninguna) y `classesFromCql` reconstruye la selección o da `null` si el CQL es ajeno.
+- `urdimbre/cql`: `EXCLUDE` y la opción `axisOrder` (`'lonlat'` por omisión, igual que antes, o
+  `'latlon'`) en `bbox`, con el orden de ejes de `EPSG:4326` en GeoServer documentado.
+- `identify`: capas `geojson`, `vector-tiles` y `pmtiles` con `identify` en el mismo iterable y antes
+  que el WMS. `query(layerId, at, tolerance)` las consulta en el motor y, si da `null`, el GeoJSON en
+  línea se prueba localmente por punto, línea y polígono con `tolerance` en píxeles (5) en
+  `EPSG:3857` o `EPSG:4326`. `DEFAULT_TOLERANCE` y el tipo `IdentifyQuery`.
+- `urdimbre/maplibre`: `renderedQuery(map)`, el `query` de `identify` sobre `queryRenderedFeatures`
+  sin duplicados por tesela, y `styleLayersOf(map, id)`.
+
+### Cambiado
+
+- `bindMapLibre`: con `getLayersOrder` (opcional en `MapLibreMapLike`) solo mueve sus capas fuera de
+  orden y deja en su sitio las ajenas intercaladas (deck.gl); una fuente reemplazada vuelve a su
+  lugar. Sin `getLayersOrder` se comporta como antes.
+
+### Corregido
+
+- `bindMapLibre` ya no llama `setTiles` si la fuente ya tiene exactamente esa plantilla.
+
 ## [0.3.0] - 2026-10-19
 
 ### Agregado

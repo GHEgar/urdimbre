@@ -17,7 +17,7 @@ export const LAYER_KINDS: readonly LayerKind[] = ['wms', 'vector-tiles', 'pmtile
 const CAPABILITIES: readonly LayerCapability[] = ['time', 'table', 'hexbin', '3d', 'identify'];
 const LAYER_FIELDS = [
     'id', 'title', 'abstract', 'tags', 'kind', 'wms', 'wfs', 'tiles', 'data', 'dimensions', 'capabilities',
-    'attribution', 'bbox', 'legendUrl', 'minZoom', 'maxZoom', 'crossOrigin',
+    'attribution', 'bbox', 'legendUrl', 'minZoom', 'maxZoom', 'crossOrigin', 'opacity', 'metadata',
 ];
 const KIND_SERVICE: Record<LayerKind, 'wms' | 'tiles' | 'data'> = {
     'wms': 'wms',
@@ -62,6 +62,18 @@ const zoom = (value: unknown, path: string): number | undefined => {
     if (value === undefined) return undefined;
     if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 30) return fail(path, 'must be a number from 0 to 30');
     return value;
+};
+
+const opacity = (value: unknown, path: string): number | undefined => {
+    if (value === undefined) return undefined;
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) return fail(path, 'must be a number from 0 to 1');
+    return value;
+};
+
+const metadata = (value: unknown, path: string): Raw | undefined => {
+    if (value === undefined) return undefined;
+    if (!isRecord(value)) return fail(path, 'must be an object');
+    return structuredClone(value);
 };
 
 const list = <T>(value: unknown, path: string, item: (entry: unknown, at: string) => T): T[] | undefined => {
@@ -165,6 +177,8 @@ export const validateLayer = (value: unknown, path: string): LayerDef => {
         minZoom: zoom(raw.minZoom, `${path}.minZoom`),
         maxZoom: zoom(raw.maxZoom, `${path}.maxZoom`),
         crossOrigin: choice<CrossOrigin>(raw.crossOrigin, `${path}.crossOrigin`, ['anonymous', 'use-credentials', null]),
+        opacity: opacity(raw.opacity, `${path}.opacity`),
+        metadata: metadata(raw.metadata, `${path}.metadata`),
     });
     checkKind(layer, path);
     return layer;

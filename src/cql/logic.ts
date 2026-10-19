@@ -3,6 +3,8 @@ import { quoteIdentifier, quoteLiteral, quoteString } from './literal.js';
 
 type Part = string | null | undefined;
 
+export const EXCLUDE = 'EXCLUDE';
+
 const present = (parts: readonly Part[]): string[] =>
     parts.map(part => part?.trim()).filter((part): part is string => Boolean(part));
 
@@ -35,8 +37,16 @@ export const between = (field: string, from: string | number, to: string | numbe
     return `${quoteIdentifier(field)} BETWEEN ${quoteLiteral(low)} AND ${quoteLiteral(high)}`;
 };
 
-export const bbox = (geometryField: string, box: readonly [number, number, number, number], srs?: string): string => {
-    const coordinates = box.map(value => formatNumber(value, BBOX_DECIMALS)).join(', ');
+export type AxisOrder = 'lonlat' | 'latlon';
+
+export interface BboxOptions {
+    axisOrder?: AxisOrder;
+}
+
+export const bbox = (geometryField: string, box: readonly [number, number, number, number], srs?: string, options: BboxOptions = {}): string => {
+    const [minX, minY, maxX, maxY] = box;
+    const ordered = options.axisOrder === 'latlon' ? [minY, minX, maxY, maxX] : [minX, minY, maxX, maxY];
+    const coordinates = ordered.map(value => formatNumber(value, BBOX_DECIMALS)).join(', ');
     const suffix = srs ? `, ${quoteString(srs)}` : '';
     return `BBOX(${quoteIdentifier(geometryField)}, ${coordinates}${suffix})`;
 };
