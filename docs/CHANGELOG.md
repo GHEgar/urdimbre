@@ -8,8 +8,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 ### Agregado
 
 - `urdimbre/geocode`: `normalizeName` (sin acentos, minúsculas y sin puntuación), `createPlaceIndex`
-  para buscar nombres sin red (exacto, prefijo, prefijo por palabra y subcadena; desempate por tipo y
-  distancia a `near`) y `createPhotonClient` con URL canónica, caché, `AbortSignal` y `placeFromPhoton`.
+  para buscar nombres sin red (primero el nombre exacto; luego prefijo y prefijo por palabra juntos, por
+  tipo y distancia a `near`; al final subcadenas) y `createPhotonClient` con URL canónica, caché,
+  `AbortSignal`, caja por `near` y `radius`, y `placeFromPhoton`.
 
 ## [0.4.0] - 2026-10-19
 

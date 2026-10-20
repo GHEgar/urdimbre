@@ -24,6 +24,8 @@ const distance = (a: Coordinate, b: Coordinate): number => {
     return Math.hypot(dx, dy);
 };
 
+const tier = (score: number): number => (score === 0 ? 0 : score <= 2 ? 1 : 2);
+
 const matchScore = (entry: Entry, query: string, terms: string[]): number => {
     if (entry.key === query) return 0;
     if (entry.key.startsWith(query)) return 1;
@@ -50,7 +52,7 @@ export const createPlaceIndex = (places: readonly Place[], options: PlaceIndexOp
                 if (score < 0) continue;
                 found.push({ entry, score, kind: rank[entry.place.kind] ?? 99, far: near ? distance(near, entry.place.coordinate) : 0 });
             }
-            found.sort((a, b) => a.score - b.score || a.kind - b.kind || a.far - b.far || a.entry.key.length - b.entry.key.length);
+            found.sort((a, b) => tier(a.score) - tier(b.score) || a.kind - b.kind || a.far - b.far || a.score - b.score || a.entry.key.length - b.entry.key.length);
             return found.slice(0, limit).map(({ entry }) => entry.place);
         },
     };

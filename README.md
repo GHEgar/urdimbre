@@ -207,8 +207,8 @@ as soon as it is known; aborting `signal` or leaving the loop cancels every requ
 ## Geocode
 
 `createPlaceIndex(places, { kindRank })` searches names without the network. Matching ignores case,
-accents and punctuation; results rank exact names first, then prefixes, word prefixes and substrings,
-and break ties by `kindRank` and by distance to `near`.
+accents and punctuation. Exact names come first; prefixes and word prefixes share the next tier,
+ordered by `kindRank` and by distance to `near`; substrings come last.
 
 ```ts
 const index = createPlaceIndex(places, { kindRank: { locality: 0, neighbourhood: 1, street: 2 } })
@@ -217,7 +217,8 @@ index.search('av chapul', { near: [-103.35, 20.67], limit: 8 })
 
 `createPhotonClient({ url, lang, fetch })` queries a Photon server (the public
 `https://photon.komoot.io/api/` by default, or your own). URLs are canonical, results are cached and
-`search(query, { near, bbox, limit, signal })` returns the same `Place` shape as the index.
+`search(query, { near, radius, bbox, limit, signal })` returns the same `Place` shape as the index;
+`near` biases the ranking and, with `radius` in degrees, also limits results to that box.
 
 ## OpenLayers
 

@@ -27,6 +27,11 @@ describe('createPlaceIndex', () => {
         expect(index.search('av chapúl').map(item => item.name)).toEqual(['Avenida Chapultepec']);
     });
 
+    it('keeps prefix and word prefix matches in one tier ordered by kind and distance', () => {
+        const calles = createPlaceIndex([place('Chapultepec 927', 'street', [-103.1, 20.5]), place('Avenida Chapultepec', 'street', [-103.37, 20.67])]);
+        expect(calles.search('chapul', { near: [-103.36, 20.67] }).map(item => item.name)).toEqual(['Avenida Chapultepec', 'Chapultepec 927']);
+    });
+
     it('breaks ties by kind and then by distance', () => {
         const cercano = createPlaceIndex([place('Centro', 'park', [-99, 19]), place('Centro', 'park', [-103.3, 20.6])]);
         expect(cercano.search('centro', { near: [-103.35, 20.67] })[0]?.coordinate).toEqual([-103.3, 20.6]);
@@ -53,6 +58,10 @@ describe('createPhotonClient', () => {
         expect(client.searchUrl('  la   minerva ', { near: [-103.391234, 20.6743], limit: 5 })).toBe('/photon/api?lang=default&lat=20.6743&limit=5&lon=-103.3912&q=la+minerva');
     });
 
+    it('turns near and radius into a bounding box', () => {
+        expect(createPhotonClient().searchUrl('x', { near: [-103, 20], radius: 1.5 })).toBe('https://photon.komoot.io/api/?bbox=-104.5%2C18.5%2C-101.5%2C21.5&lat=20&limit=6&lon=-103&q=x');
+    });
+
     it('maps features and caches repeated searches', async () => {
         const fetcher = vi.fn(async () => new Response(JSON.stringify(respuesta)));
         const client = createPhotonClient({ fetch: fetcher as unknown as typeof fetch });
@@ -61,7 +70,7 @@ describe('createPhotonClient', () => {
         expect(fetcher).toHaveBeenCalledTimes(1);
         expect(places).toEqual([
             { name: 'La Minerva', kind: 'roundabout', coordinate: [-103.39, 20.67], detail: 'Guadalajara · Jalisco', source: 'photon' },
-            { name: 'Avenida Juárez 976', kind: 'place', coordinate: [-103.35, 20.68], detail: 'Avenida Juárez 976 · Guadalajara', bbox: [-103.36, 20.67, -103.34, 20.69], source: 'photon' },
+            { name: 'Avenida Juárez 976', kind: 'place', coordinate: [-103.35, 20.68], detail: 'Guadalajara', bbox: [-103.36, 20.67, -103.34, 20.69], source: 'photon' },
         ]);
     });
 
