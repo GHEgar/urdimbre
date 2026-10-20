@@ -246,7 +246,7 @@ ordered by `kindRank` and by distance to `near`; substrings come last.
 
 ```ts
 const index = createPlaceIndex(places, { kindRank: { locality: 0, neighbourhood: 1, street: 2 } })
-index.search('av chapul', { near: [-103.35, 20.67], limit: 8 })
+index.search('av chapul', { near: [-103.35, 20.67], limit: 8, bands: [0.25, 2.5] })
 ```
 
 `createPhotonClient({ url, lang, fetch })` queries a Photon server (the public

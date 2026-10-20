@@ -13,4 +13,5 @@ export interface Place {
 export interface SearchOptions {
     limit?: number;
     near?: Coordinate;
+    bands?: readonly number[];
 }

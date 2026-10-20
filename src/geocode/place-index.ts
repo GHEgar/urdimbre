@@ -42,17 +42,22 @@ export const createPlaceIndex = (places: readonly Place[], options: PlaceIndexOp
     });
     return {
         size: entries.length,
-        search(query, { limit = DEFAULT_LIMIT, near } = {}) {
+        search(query, { limit = DEFAULT_LIMIT, near, bands = [] } = {}) {
             const normalized = normalizeName(query);
             if (!normalized) return [];
             const terms = normalized.split(' ');
-            const found: { entry: Entry; score: number; kind: number; far: number }[] = [];
+            const found: { entry: Entry; score: number; kind: number; far: number; band: number }[] = [];
+            const bandOf = (far: number): number => {
+                const index = bands.findIndex(limit => far < limit);
+                return index < 0 ? bands.length : index;
+            };
             for (const entry of entries) {
                 const score = matchScore(entry, normalized, terms);
                 if (score < 0) continue;
-                found.push({ entry, score, kind: rank[entry.place.kind] ?? 99, far: near ? distance(near, entry.place.coordinate) : 0 });
+                const far = near ? distance(near, entry.place.coordinate) : 0;
+                found.push({ entry, score, kind: rank[entry.place.kind] ?? 99, far, band: near ? bandOf(far) : 0 });
             }
-            found.sort((a, b) => tier(a.score) - tier(b.score) || a.kind - b.kind || a.far - b.far || a.score - b.score || a.entry.key.length - b.entry.key.length);
+            found.sort((a, b) => a.band - b.band || tier(a.score) - tier(b.score) || a.kind - b.kind || a.far - b.far || a.score - b.score || a.entry.key.length - b.entry.key.length);
             return found.slice(0, limit).map(({ entry }) => entry.place);
         },
     };

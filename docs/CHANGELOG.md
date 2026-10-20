@@ -3,6 +3,14 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado con
 [SemVer](https://semver.org/lang/es/).
 
+## [0.6.1] - 2026-10-20
+
+### Agregado
+
+- `urdimbre/geocode`: `bands` en `search` (distancias en grados a `near`) ordena primero por banda de
+  cercanía y luego por coincidencia, para índices nacionales donde un nombre exacto lejano no debe tapar
+  uno parecido cercano.
+
 ## [0.6.0] - 2026-10-19
 
 ### Agregado

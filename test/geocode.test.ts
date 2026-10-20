@@ -32,6 +32,13 @@ describe('createPlaceIndex', () => {
         expect(calles.search('chapul', { near: [-103.36, 20.67] }).map(item => item.name)).toEqual(['Avenida Chapultepec', 'Chapultepec 927']);
     });
 
+    it('puts nearby bands first when bands are given', () => {
+        const lejos = Array.from({ length: 20 }, (_, i) => place('Chapultepec', 'neighbourhood', [-99 + i * 0.01, 19.4]));
+        const indice = createPlaceIndex([...lejos, place('Chapultepec Country', 'neighbourhood', [-103.37, 20.69])]);
+        expect(indice.search('chapultepec', { near: [-103.35, 20.67], limit: 3, bands: [0.25, 2.5] })[0]?.name).toBe('Chapultepec Country');
+        expect(indice.search('chapultepec', { near: [-103.35, 20.67], limit: 3 })[0]?.name).toBe('Chapultepec');
+    });
+
     it('breaks ties by kind and then by distance', () => {
         const cercano = createPlaceIndex([place('Centro', 'park', [-99, 19]), place('Centro', 'park', [-103.3, 20.6])]);
         expect(cercano.search('centro', { near: [-103.35, 20.67] })[0]?.coordinate).toEqual([-103.3, 20.6]);
