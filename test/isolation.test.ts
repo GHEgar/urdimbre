@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const root = process.cwd();
-const CORE = ['src/cql', 'src/ogc', 'src/shared', 'src/catalog', 'src/arbiter', 'src/state', 'src/legend', 'src/identify'];
+const CORE = ['src/cql', 'src/ogc', 'src/shared', 'src/catalog', 'src/arbiter', 'src/state', 'src/legend', 'src/identify', 'src/geocode'];
 
 const read = (folder: string): [string, string][] =>
     readdirSync(`${root}/${folder}`, { withFileTypes: true }).flatMap(entry => (entry.isDirectory()

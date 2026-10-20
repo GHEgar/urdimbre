@@ -27,6 +27,7 @@ npm install urdimbre
 | `urdimbre/state` | `encodeState`, `decodeState`, `bindUrl`, `readLayerState`, `applyLayerState` | `history` and `location` for `bindUrl` |
 | `urdimbre/legend` | `legendFromWms`, `legendFromClasses`, `legendFromMapLibreStyle`, `legendForState`, `classFilterCql` | nothing |
 | `urdimbre/identify` | `identify`: progressive, cancelable `GetFeatureInfo` | `fetch` |
+| `urdimbre/geocode` | Offline place-name index and a Photon geocoder client | `fetch` |
 | `urdimbre/ol` | `bindOl`, `bindArbiter` | `ol` 10 |
 | `urdimbre/maplibre` | `bindMapLibre`, `bindArbiter`, `renderedQuery` | a MapLibre GL JS 6 map (types only) |
 | `urdimbre` | everything but `ol` and `maplibre` | as above |
@@ -202,6 +203,21 @@ as soon as it is known; aborting `signal` or leaving the loop cancels every requ
 - GeoJSON, vector tiles and PMTiles answer first: `query(layerId, at, tolerance)` returns what is
   drawn under the pointer; on `null`, inline GeoJSON is hit locally within `tolerance` px (5) from
   `coordinate` and `resolution` in `EPSG:3857` (the default) or `EPSG:4326`.
+
+## Geocode
+
+`createPlaceIndex(places, { kindRank })` searches names without the network. Matching ignores case,
+accents and punctuation; results rank exact names first, then prefixes, word prefixes and substrings,
+and break ties by `kindRank` and by distance to `near`.
+
+```ts
+const index = createPlaceIndex(places, { kindRank: { locality: 0, neighbourhood: 1, street: 2 } })
+index.search('av chapul', { near: [-103.35, 20.67], limit: 8 })
+```
+
+`createPhotonClient({ url, lang, fetch })` queries a Photon server (the public
+`https://photon.komoot.io/api/` by default, or your own). URLs are canonical, results are cached and
+`search(query, { near, bbox, limit, signal })` returns the same `Place` shape as the index.
 
 ## OpenLayers
 

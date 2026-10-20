@@ -3,6 +3,14 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado con
 [SemVer](https://semver.org/lang/es/).
 
+## [0.5.0] - 2026-10-19
+
+### Agregado
+
+- `urdimbre/geocode`: `normalizeName` (sin acentos, minúsculas y sin puntuación), `createPlaceIndex`
+  para buscar nombres sin red (exacto, prefijo, prefijo por palabra y subcadena; desempate por tipo y
+  distancia a `near`) y `createPhotonClient` con URL canónica, caché, `AbortSignal` y `placeFromPhoton`.
+
 ## [0.4.0] - 2026-10-19
 
 ### Agregado
