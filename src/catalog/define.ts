@@ -10,6 +10,10 @@ const deepFreeze = <T>(value: T): T => {
     return value;
 };
 
+export const defineLayer = (input: unknown, path = 'layer'): LayerDef => deepFreeze(validateLayer(input, path));
+
+export const catalogHash = (layers: readonly LayerDef[]): string => fnv1a(stableJson(layers));
+
 const readLayers = (input: unknown): unknown[] => {
     if (Array.isArray(input)) return input;
     if (isRecord(input) && 'layers' in input) {
@@ -27,6 +31,6 @@ export const defineCatalog = (input: unknown): Catalog => {
         byId.set(layer.id, layer);
     });
     deepFreeze(layers);
-    const hash = fnv1a(stableJson(layers));
+    const hash = catalogHash(layers);
     return Object.freeze({ layers, hash, get: (id: string) => byId.get(id) });
 };

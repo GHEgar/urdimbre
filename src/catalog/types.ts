@@ -4,6 +4,8 @@ export type LayerKind = 'wms' | 'vector-tiles' | 'pmtiles' | 'geojson' | 'xyz';
 
 export type LayerCapability = 'time' | 'table' | 'hexbin' | '3d' | 'identify';
 
+export type GeometryType = 'point' | 'line' | 'polygon';
+
 export type CrossOrigin = 'anonymous' | 'use-credentials' | null;
 
 export interface WmsDef {
@@ -43,6 +45,7 @@ export interface LayerDef {
     wfs?: WfsDef;
     tiles?: TilesDef;
     data?: unknown;
+    geometryType?: GeometryType;
     dimensions?: Readonly<Record<string, DimensionDef>>;
     capabilities?: readonly LayerCapability[];
     attribution?: string;

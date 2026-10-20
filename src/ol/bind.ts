@@ -8,6 +8,11 @@ export interface BindOlOptions {
     createLayer?(description: LayerDescription, map: OlMap): BaseLayer | null | undefined;
 }
 
+export interface OlBinding {
+    (): void;
+    refresh(id?: string): void;
+}
+
 interface Entry {
     layer: BaseLayer;
     description: LayerDescription;
@@ -24,8 +29,9 @@ const applyProps = (layer: BaseLayer, description: LayerDescription): void => {
     if (layer.getMaxZoom() !== maxZoom) layer.setMaxZoom(maxZoom);
 };
 
-export const bindOl = (map: OlMap, input: DescriptionSource, options: BindOlOptions = {}): () => void => {
+export const bindOl = (map: OlMap, input: DescriptionSource, options: BindOlOptions = {}): OlBinding => {
     const entries = new Map<string, Entry>();
+    const stale = new Set<string>();
 
     const build = (description: LayerDescription): Omit<Entry, 'description'> | null => {
         const custom = options.createLayer?.(description, map) ?? null;
@@ -64,8 +70,8 @@ export const bindOl = (map: OlMap, input: DescriptionSource, options: BindOlOpti
                 entries.set(description.id, { ...built, description });
                 continue;
             }
-            if (entry.description.key !== description.key
-                && (entry.custom || !updateInPlace(entry.layer, entry.description.source, description.source))) {
+            if (stale.has(description.id) || (entry.description.key !== description.key
+                && (entry.custom || !updateInPlace(entry.layer, entry.description.source, description.source)))) {
                 replace(entry, description);
                 if (!entries.has(description.id)) continue;
             }
@@ -77,13 +83,20 @@ export const bindOl = (map: OlMap, input: DescriptionSource, options: BindOlOpti
             map.removeLayer(entry.layer);
             entries.delete(id);
         }
+        stale.clear();
     };
 
     sync();
     const unsubscribe = input.subscribe(sync);
-    return () => {
+    const stop = (): void => {
         unsubscribe();
         for (const entry of entries.values()) map.removeLayer(entry.layer);
         entries.clear();
     };
+    const refresh = (id?: string): void => {
+        const ids = id === undefined ? [...entries.keys()] : [id];
+        for (const item of ids) if (entries.has(item)) stale.add(item);
+        if (stale.size > 0) sync();
+    };
+    return Object.assign(stop, { refresh });
 };

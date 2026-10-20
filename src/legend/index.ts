@@ -3,7 +3,7 @@ export type { ClassesOptions, ClassLike } from './classes.js';
 export { classesFromCql, classFilterCql } from './filter.js';
 export type { ClassBounds, ClassesInput, ClassFilterOptions } from './filter.js';
 export { legendFromMapLibreStyle } from './maplibre.js';
-export { legendForState } from './state.js';
+export { DEFAULT_SYMBOL_COLOR, legendForState, shapesOf } from './state.js';
 export type { LegendForStateOptions } from './state.js';
 export type { LegendClass, LegendEntry, LegendStop, LegendSymbol, SymbolShape } from './types.js';
 export { legendFromWms, legendUrlFromWms } from './wms.js';

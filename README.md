@@ -22,7 +22,7 @@ npm install urdimbre
 |---|---|---|
 | `urdimbre/ogc` | `createOgcClient`, `canonicalUrl`, `parseWmsCapabilities`, `OgcError` | `fetch`; `DOMParser` for WMS capabilities |
 | `urdimbre/cql` | `createCqlComposer` and the helpers `and`, `or`, `not`, `inList`, `between`, `bbox`, quoting | nothing |
-| `urdimbre/catalog` | `defineCatalog`, `enrichFromCapabilities`, `createLayerState`, `describe`, `describeState` | nothing |
+| `urdimbre/catalog` | `defineCatalog`, `createLiveCatalog`, `enrichFromCapabilities`, `createLayerState`, `describe`, `describeState` | nothing |
 | `urdimbre/arbiter` | `createArbiter`: one tool owns the click at a time | nothing |
 | `urdimbre/state` | `encodeState`, `decodeState`, `bindUrl`, `readLayerState`, `applyLayerState` | `history` and `location` for `bindUrl` |
 | `urdimbre/legend` | `legendFromWms`, `legendFromClasses`, `legendFromMapLibreStyle`, `legendForState`, `classFilterCql` | nothing |
@@ -114,6 +114,7 @@ missing, even if the CQL filters by date. `bbox(field, box, srs, { axisOrder })`
 | `wms` | `{ url, layers, styles, format, tiled, tileSize, version }`, required for `wms` |
 | `tiles` | `{ url, sourceLayer }`, required for `vector-tiles`, `pmtiles` and `xyz` |
 | `data`, `wfs` | Inline GeoJSON or its URL, or `{ url, typeName, geometryName, idField }`; one is required for `geojson` |
+| `geometryType` | `point`, `line` or `polygon`, for `vector-tiles`, `pmtiles` and `geojson`: the legend shape and the default MapLibre style layer |
 | `dimensions` | `{ time: { default, values } }`; any name, such as `elevation` or `level` |
 | `opacity` | Starting opacity (0–1), used when the initial state gives none |
 | `metadata` | A free object for your app (thumbnails, skins): never checked inside, part of the `hash` |
@@ -122,7 +123,33 @@ missing, even if the CQL filters by date. `bbox(field, box, srs, { axisOrder })`
 Errors are `CatalogError`s with the field `path` (`layers[2].wms.layers`), also for unknown fields.
 `hash` is FNV-1a over the JSON with sorted keys. `enrichFromCapabilities(catalog, client)` fills
 title, abstract, bbox, dimensions and legend URL from one `GetCapabilities` per service, never over
-what the catalog declares.
+what the catalog declares. `defineLayer(def, path)` validates and freezes a single layer.
+
+### Live catalog
+
+`createLiveCatalog(base)` takes a `Catalog` (or the input of `defineCatalog`) and returns a
+`LiveCatalog`: a `Catalog` whose layers change at run time, for layers the user uploads or a server
+lists after start.
+
+```ts
+const catalog = createLiveCatalog(defineCatalog(input));
+const layers = createLayerState(catalog);
+bindMapLibre(map, describeState(catalog, layers));
+
+catalog.add({ id: 'mine', kind: 'vector-tiles', tiles: { url: '/tiles/mine/{z}/{x}/{y}.pbf' }, geometryType: 'polygon' });
+layers.add('mine');
+catalog.set({ ...catalog.get('mine'), title: 'Renamed' });
+catalog.remove('mine');
+```
+
+- `add(def)` validates like `defineCatalog` (errors say `layer.<field>`), freezes and appends; it
+  throws a `CatalogError` if the id exists. `set(def)` adds or replaces in place, and does nothing
+  when the def is equal. `remove(id)` returns whether it was there. `has(id)`, `get(id)`, `layers`.
+- `hash` changes with every change. `subscribe(listener)` is called after each one.
+- `describeState` follows the catalog too: a removed layer leaves the map while staying in the
+  layer state, and comes back if its id is added again. `createLayerState` applies the `opacity`
+  of layers added later. `encodeState`, `decodeState`, `legendForState` and `identify` read the
+  catalog on each call, so they see the current layers.
 
 ## Layer state
 
@@ -140,7 +167,9 @@ dimensions, cql }`; `active[0]` is the top layer, and records skip opacity 1 and
 - WMS is tiled unless the layer says `tiled: false`: `TILED=true`, a fixed tile size and canonical
   parameters. Dimensions go as `TIME`, `ELEVATION` or `DIM_<NAME>`, the layer CQL as `CQL_FILTER`.
 - `zIndex` is `100 + (layers - position) * 10`; tools keep `900`–`999` (`TOOL_Z_MIN`, `TOOL_Z_MAX`).
-- `describeState(catalog, state)` gives the `{ getDescriptions, subscribe }` the adapters take.
+- `describeState(catalog, state)` gives the `{ getDescriptions, subscribe }` the adapters take; with
+  a live catalog it also listens to it.
+- `geometryType` from the def is copied to the description; it is not part of the `key`.
 
 ## Arbiter
 
@@ -188,8 +217,13 @@ A legend is data, one `LegendEntry` per layer: `classes` (`label`, `color`, `min
 - `classFilterCql(field, classes, visible, { lastInclusive })` turns the visible class indexes into a
   CQL fragment: `null` when all are visible, `EXCLUDE` when none, one range per class otherwise.
   `classesFromCql(fragment, field, classes)` reads the selection back, or `null` for foreign CQL.
-- `legendForState(catalog, descriptions, { custom, hidden })` lists the visible layers from the top;
-  `custom(description, def)` returns your own entry for a layer.
+- `legendForState(catalog, descriptions, { custom, hidden, symbolColor, shapeLabels })` lists the
+  visible layers from the top; `custom(description, def)` returns your own entry for a layer. WMS and
+  `legendUrl` give an `image`. `vector-tiles`, `pmtiles` and `geojson` give `symbols` with the shape
+  of `geometryType` (`polygon` is `fill`), or the shapes found in inline GeoJSON: one item named after
+  the layer, or one per shape labeled by `shapeLabels` (`Points`, `Lines`, `Areas`). The color is
+  `symbolColor` (a string or `(description, def) => string`), else `currentColor`
+  (`DEFAULT_SYMBOL_COLOR`). `shapesOf(def)` gives those shapes.
 
 ## Identify
 
@@ -228,19 +262,28 @@ never touches other layers. On each change it does the least: `setOpacity`, `set
 moves. A source is recreated only when its `key` changes and cannot be updated. WMS uses `TileWMS` (or
 `ImageWMS` with `ratio: 1`) without `hidpi`, so every device asks for the same tiles. `createLayer`
 returns your own layer for a description, which PMTiles needs. `bindArbiter(map, arbiter)` turns
-`singleclick` into `{ coordinate: [lon, lat], pixel, originalEvent }`. Both return a cleanup function.
+`singleclick` into `{ coordinate: [lon, lat], pixel, originalEvent }`. Both return a cleanup function;
+the one from `bindOl` also has `refresh(id?)`, which builds the layer again (calling `createLayer`)
+in its place, for one id or every bound layer.
 
 ## MapLibre
 
-`bindMapLibre(map, source, { layers, beforeId })` takes any `MapLibreMapLike` and never imports
+`bindMapLibre(map, source, { layers, beforeId, baseUrl })` takes any `MapLibreMapLike` and never imports
 `maplibre-gl` at run time. WMS becomes a `raster` source canonical up to `&BBOX={bbox-epsg-3857}`,
 vector tiles and PMTiles `vector` sources (register `pmtiles://` yourself), GeoJSON a `geojson` one.
-A new `key` calls `setTiles` (only for a new template) or `setData`, or replaces the source in its
-place. Through `getLayersOrder` it moves only its own layers that are out of order, below `beforeId`,
+A new `key` calls `setTiles` (only for a new template, remembered even when the source does not
+expose `tiles`) or `setData`, or replaces the source in its place. MapLibre needs absolute URLs:
+`baseUrl` (such as `location.href`) resolves relative `tiles`, TileJSON, PMTiles and GeoJSON URLs,
+keeping `{z}`, `{x}`, `{y}` and `{bbox-epsg-3857}`; `resolveUrl(url, baseUrl)` does the same. Through `getLayersOrder` it moves only its own layers that are out of order, below `beforeId`,
 so foreign layers in between (deck.gl interleaved) stay put. `layers(description)` gives the style
-layers for vector data (a `line` by default); opacity and `visibility` are paint and layout
+layers for vector data (`circle`, `line` or `fill` from `geometryType`, else a `line`); opacity and `visibility` are paint and layout
 properties. It waits for the style and adds its layers again after `setStyle`. `bindArbiter(map,
 arbiter)` turns `click` into a pointer; `renderedQuery(map)` is the `query` for `identify`.
+
+`bindMapLibre` returns a cleanup function with `refresh(id?)`: it removes and adds again the source
+and style layers of one active layer (or all), asking `layers(description)` again, without leaving
+the layer state and in the same place. Use it when the style or the tiles behind an unchanged URL
+change. Inactive ids are ignored; before the style loads it waits.
 
 ## Known limitations
 

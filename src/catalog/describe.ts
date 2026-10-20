@@ -2,7 +2,7 @@ import { canonicalParams, canonicalUrl } from '../ogc/canonical.js';
 import { getFeatureParams } from '../ogc/wfs.js';
 import { fnv1a, stableJson } from '../shared/hash.js';
 import type { LayerStateSnapshot } from './state.js';
-import type { Catalog, CrossOrigin, LayerDef, LayerKind } from './types.js';
+import type { Catalog, CrossOrigin, GeometryType, LayerDef, LayerKind } from './types.js';
 import { compact } from './validate.js';
 
 interface SourceBase {
@@ -56,6 +56,7 @@ export interface LayerDescription {
     visible: boolean;
     minZoom?: number;
     maxZoom?: number;
+    geometryType?: GeometryType;
     source: LayerSource;
     key: string;
 }
@@ -145,6 +146,7 @@ export const describe = (catalog: Catalog, state: LayerStateSnapshot): LayerDesc
         visible: state.visible[layer.id] ?? true,
         minZoom: layer.minZoom,
         maxZoom: layer.maxZoom,
+        geometryType: layer.geometryType,
         ...sourceOf(layer, state),
     }));
 };

@@ -1,5 +1,5 @@
 import type { Extent } from '../ogc/types.js';
-import type { CrossOrigin, DimensionDef, LayerCapability, LayerDef, LayerKind, TilesDef, WfsDef, WmsDef } from './types.js';
+import type { CrossOrigin, DimensionDef, GeometryType, LayerCapability, LayerDef, LayerKind, TilesDef, WfsDef, WmsDef } from './types.js';
 
 export class CatalogError extends Error {
     readonly path: string;
@@ -15,8 +15,9 @@ type Raw = Record<string, unknown>;
 
 export const LAYER_KINDS: readonly LayerKind[] = ['wms', 'vector-tiles', 'pmtiles', 'geojson', 'xyz'];
 const CAPABILITIES: readonly LayerCapability[] = ['time', 'table', 'hexbin', '3d', 'identify'];
+const GEOMETRY_TYPES: readonly GeometryType[] = ['point', 'line', 'polygon'];
 const LAYER_FIELDS = [
-    'id', 'title', 'abstract', 'tags', 'kind', 'wms', 'wfs', 'tiles', 'data', 'dimensions', 'capabilities',
+    'id', 'title', 'abstract', 'tags', 'kind', 'wms', 'wfs', 'tiles', 'data', 'geometryType', 'dimensions', 'capabilities',
     'attribution', 'bbox', 'legendUrl', 'minZoom', 'maxZoom', 'crossOrigin', 'opacity', 'metadata',
 ];
 const KIND_SERVICE: Record<LayerKind, 'wms' | 'tiles' | 'data'> = {
@@ -152,6 +153,7 @@ const checkKind = (layer: LayerDef, path: string): void => {
     }
     if (service === 'data' && layer.data === undefined && layer.wfs === undefined) fail(`${path}.data`, 'or wfs is required for kind geojson');
     else if (service !== 'data' && layer[service] === undefined) fail(`${path}.${service}`, `is required for kind ${layer.kind}`);
+    if (layer.geometryType !== undefined && (layer.kind === 'wms' || layer.kind === 'xyz')) fail(`${path}.geometryType`, `does not fit kind ${layer.kind}`);
     if (layer.kind === 'xyz' && !/\{z\}/.test(layer.tiles?.url ?? '')) fail(`${path}.tiles.url`, 'needs {z}, {x} and {y} for kind xyz');
     if (layer.minZoom !== undefined && layer.maxZoom !== undefined && layer.minZoom > layer.maxZoom) fail(`${path}.minZoom`, 'is above maxZoom');
 };
@@ -169,6 +171,7 @@ export const validateLayer = (value: unknown, path: string): LayerDef => {
         wfs: raw.wfs === undefined ? undefined : wfs(raw.wfs, `${path}.wfs`),
         tiles: raw.tiles === undefined ? undefined : tiles(raw.tiles, `${path}.tiles`),
         data: data(raw.data, `${path}.data`),
+        geometryType: choice(raw.geometryType, `${path}.geometryType`, GEOMETRY_TYPES),
         dimensions: dimensions(raw.dimensions, `${path}.dimensions`),
         capabilities: list(raw.capabilities, `${path}.capabilities`, (entry, at) => choice(entry, at, CAPABILITIES) ?? fail(at, 'is required')),
         attribution: text(raw.attribution, `${path}.attribution`),

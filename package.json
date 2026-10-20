@@ -1,6 +1,6 @@
 {
     "name": "urdimbre",
-    "version": "0.5.0",
+    "version": "0.6.0",
     "description": "Headless map layer core: OGC client, CQL composer, layer catalog and reconciler for OpenLayers and MapLibre.",
     "keywords": [
         "ogc",

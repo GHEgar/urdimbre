@@ -1,5 +1,6 @@
 import { createCqlComposer } from '../cql/composer.js';
 import type { CqlComposer } from '../cql/composer.js';
+import { isLiveCatalog } from './live.js';
 import type { Catalog } from './types.js';
 
 export interface LayerStateSnapshot {
@@ -29,9 +30,15 @@ export interface LayerStateOptions {
 
 export const INITIAL_CQL_FRAGMENT = 'base';
 
-const defaults = new WeakMap<LayerState, Readonly<Record<string, number>>>();
+const catalogs = new WeakMap<LayerState, Catalog>();
 
-export const defaultOpacities = (state: LayerState): Readonly<Record<string, number>> => defaults.get(state) ?? {};
+const declaredOpacities = (catalog: Catalog): Record<string, number> =>
+    Object.fromEntries(catalog.layers.flatMap(layer => (layer.opacity === undefined ? [] : [[layer.id, layer.opacity]])));
+
+export const defaultOpacities = (state: LayerState): Readonly<Record<string, number>> => {
+    const catalog = catalogs.get(state);
+    return catalog ? declaredOpacities(catalog) : {};
+};
 
 export const defaultOpacity = (state: LayerState, id: string): number => defaultOpacities(state)[id] ?? 1;
 
@@ -140,8 +147,8 @@ export const createLayerState = (catalog: Catalog, initial: Partial<LayerStateSn
         },
     };
 
-    const declared = Object.fromEntries(catalog.layers.flatMap(layer => (layer.opacity === undefined ? [] : [[layer.id, layer.opacity]])));
-    defaults.set(state, Object.freeze(declared));
+    const declared = declaredOpacities(catalog);
+    catalogs.set(state, catalog);
     for (const [id, value] of Object.entries(declared)) {
         if (initial.opacity?.[id] === undefined) state.setOpacity(id, value);
     }
@@ -151,5 +158,15 @@ export const createLayerState = (catalog: Catalog, initial: Partial<LayerStateSn
         for (const [name, value] of Object.entries(values)) state.setDimension(id, name, value);
     }
     for (const [id, cql] of Object.entries(initial.cql ?? {})) composer(id).set(INITIAL_CQL_FRAGMENT, cql);
+    if (isLiveCatalog(catalog)) {
+        const seen = new Set(catalog.layers.map(layer => layer.id));
+        catalog.subscribe(() => {
+            for (const layer of catalog.layers) {
+                if (seen.has(layer.id)) continue;
+                seen.add(layer.id);
+                if (layer.opacity !== undefined && snapshot.opacity[layer.id] === undefined) state.setOpacity(layer.id, layer.opacity);
+            }
+        });
+    }
     return state;
 };

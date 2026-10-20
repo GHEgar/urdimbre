@@ -3,6 +3,37 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado con
 [SemVer](https://semver.org/lang/es/).
 
+## [0.6.0] - 2026-10-19
+
+### Agregado
+
+- `createLiveCatalog(base)`: catálogo vivo que cumple `Catalog` y agrega `add(def)`, `set(def)`,
+  `remove(id)`, `has(id)` y `subscribe(listener)`. Valida cada capa igual que `defineCatalog`, la
+  congela y cambia el `hash` con cada cambio. `isLiveCatalog` y `defineLayer(def, path)` para validar
+  una sola capa.
+- `describeState` escucha también al catálogo vivo y `createLayerState` aplica la `opacity` de las
+  capas que llegan después.
+- `refresh(id?)` en la función que devuelven `bindMapLibre` y `bindOl`: vuelve a crear la fuente y
+  las capas de estilo (o la capa de OpenLayers) de una capa activa, o de todas, en su lugar y sin
+  sacarla del estado.
+- Opción `baseUrl` en `bindMapLibre` y `resolveUrl(url, baseUrl)`: resuelven URLs relativas de
+  `tiles`, TileJSON, PMTiles y GeoJSON conservando `{z}`, `{x}`, `{y}` y `{bbox-epsg-3857}`.
+- `LayerDef.geometryType` (`point`, `line`, `polygon`) para `vector-tiles`, `pmtiles` y `geojson`; pasa
+  a `LayerDescription` sin tocar la `key`.
+- `legendForState` da `symbols` para capas vectoriales con la forma de `geometryType` o las formas del
+  GeoJSON en línea; opciones `symbolColor` y `shapeLabels`, `shapesOf(def)` y `DEFAULT_SYMBOL_COLOR`.
+
+### Cambiado
+
+- La plantilla de estilo por omisión en MapLibre es `circle`, `line` o `fill` según `geometryType`
+  (`line` si no se declara).
+- `legendForState` ya no omite las capas `geojson` en línea sin `legendUrl`: da sus símbolos.
+
+### Corregido
+
+- `bindMapLibre` recuerda la plantilla que pasó a `setTiles` y no la repite cuando la fuente no
+  expone `tiles`.
+
 ## [0.5.0] - 2026-10-19
 
 ### Agregado

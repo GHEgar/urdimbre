@@ -25,25 +25,40 @@ export const wmsTemplate = (source: Extract<LayerSource, { type: 'wms-tiles' | '
     return `${url}&BBOX={bbox-epsg-3857}`;
 };
 
-export const tileUrls = (source: LayerSource): string[] | null => {
-    if (source.type === 'wms-tiles' || source.type === 'wms-image') return [wmsTemplate(source)];
-    if (source.type === 'xyz') return [source.url];
+const ABSOLUTE = /^[a-z][a-z\d+.-]*:/i;
+
+export const resolveUrl = (url: string, baseUrl?: string): string => {
+    if (baseUrl === undefined || ABSOLUTE.test(url)) return url;
+    const tokens: string[] = [];
+    const masked = url.replace(/\{[^{}]*\}/g, token => `__urdimbre${tokens.push(token) - 1}__`);
+    return new URL(masked, baseUrl).href.replace(/__urdimbre(\d+)__/g, (_, index: string) => tokens[Number(index)] as string);
+};
+
+export const tileUrls = (source: LayerSource, baseUrl?: string): string[] | null => {
+    if (source.type === 'wms-tiles' || source.type === 'wms-image') return [resolveUrl(wmsTemplate(source), baseUrl)];
+    if (source.type === 'xyz') return [resolveUrl(source.url, baseUrl)];
+    if (source.type === 'vector-tiles' && source.url.includes('{z}')) return [resolveUrl(source.url, baseUrl)];
     return null;
 };
 
-export const sourceSpec = (source: LayerSource): SourceSpecification => {
+export const sourceData = (source: Extract<LayerSource, { type: 'geojson' }>, baseUrl?: string): unknown =>
+    source.data ?? resolveUrl(source.url as string, baseUrl);
+
+export const sourceSpec = (source: LayerSource, baseUrl?: string): SourceSpecification => {
     const attribution = source.attribution === undefined ? {} : { attribution: source.attribution };
     switch (source.type) {
         case 'wms-tiles':
         case 'wms-image':
         case 'xyz':
-            return { type: 'raster', tiles: tileUrls(source) as string[], tileSize: source.type === 'wms-tiles' ? source.tileSize : 256, ...attribution };
-        case 'vector-tiles':
-            return source.url.includes('{z}') ? { type: 'vector', tiles: [source.url], ...attribution } : { type: 'vector', url: source.url, ...attribution };
+            return { type: 'raster', tiles: tileUrls(source, baseUrl) as string[], tileSize: source.type === 'wms-tiles' ? source.tileSize : 256, ...attribution };
+        case 'vector-tiles': {
+            const tiles = tileUrls(source, baseUrl);
+            return tiles ? { type: 'vector', tiles, ...attribution } : { type: 'vector', url: resolveUrl(source.url, baseUrl), ...attribution };
+        }
         case 'pmtiles':
-            return { type: 'vector', url: source.url.startsWith('pmtiles://') ? source.url : `pmtiles://${source.url}`, ...attribution };
+            return { type: 'vector', url: source.url.startsWith('pmtiles://') ? source.url : `pmtiles://${resolveUrl(source.url, baseUrl)}`, ...attribution };
         case 'geojson':
-            return { type: 'geojson', data: (source.data ?? source.url) as string, ...attribution };
+            return { type: 'geojson', data: sourceData(source, baseUrl) as string, ...attribution };
     }
 };
 
@@ -59,8 +74,12 @@ export const opacityPaint = (template: LayerTemplate, opacity: number): Record<s
     return result;
 };
 
-export const defaultTemplates = (description: LayerDescription): LayerTemplate[] =>
-    (isRaster(description.source) ? [{ type: 'raster' }] : [{ type: 'line' }]) as LayerTemplate[];
+const GEOMETRY_TEMPLATES: Record<NonNullable<LayerDescription['geometryType']>, string> = { point: 'circle', line: 'line', polygon: 'fill' };
+
+export const defaultTemplates = (description: LayerDescription): LayerTemplate[] => {
+    if (isRaster(description.source)) return [{ type: 'raster' }] as LayerTemplate[];
+    return [{ type: description.geometryType ? GEOMETRY_TEMPLATES[description.geometryType] : 'line' }] as LayerTemplate[];
+};
 
 export const layerSpecs = (description: LayerDescription, templates: readonly LayerTemplate[], sourceId: string): LayerSpecification[] => {
     const sourceLayer = 'sourceLayer' in description.source ? description.source.sourceLayer : undefined;

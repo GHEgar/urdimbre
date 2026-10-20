@@ -2,7 +2,7 @@ import type { LayerSpecification, SourceSpecification } from 'maplibre-gl';
 import type { LayerDescription } from '../catalog/describe.js';
 import type { DescriptionSource } from '../catalog/observe.js';
 import { nextAbove, planMoves } from './order.js';
-import { defaultTemplates, layerSpecs, opacityPaint, PREFIX, sourceSpec, tileUrls } from './specs.js';
+import { defaultTemplates, layerSpecs, opacityPaint, PREFIX, sourceData, sourceSpec, tileUrls } from './specs.js';
 import type { LayerTemplate } from './specs.js';
 
 export type MapLibreEventName = 'click' | 'load' | 'style.load' | 'styledata' | 'idle';
@@ -26,6 +26,12 @@ export interface MapLibreMapLike {
 export interface BindMapLibreOptions {
     layers?(description: LayerDescription): readonly LayerTemplate[] | null | undefined;
     beforeId?: string;
+    baseUrl?: string;
+}
+
+export interface MapLibreBinding {
+    (): void;
+    refresh(id?: string): void;
 }
 
 interface Entry {
@@ -33,6 +39,7 @@ interface Entry {
     sourceId: string;
     templates: readonly LayerTemplate[];
     layers: LayerSpecification[];
+    tiles: readonly string[] | null;
 }
 
 interface LiveSource {
@@ -46,8 +53,10 @@ const sameTiles = (current: unknown, next: readonly string[]): boolean =>
 
 const sameZoom = (a: LayerDescription, b: LayerDescription): boolean => a.minZoom === b.minZoom && a.maxZoom === b.maxZoom;
 
-export const bindMapLibre = (map: MapLibreMapLike, input: DescriptionSource, options: BindMapLibreOptions = {}): () => void => {
+export const bindMapLibre = (map: MapLibreMapLike, input: DescriptionSource, options: BindMapLibreOptions = {}): MapLibreBinding => {
     const entries = new Map<string, Entry>();
+    const stale = new Set<string>();
+    const { baseUrl } = options;
     let order: string[] = [];
     const styleReady = (): boolean => !map.isStyleLoaded || map.isStyleLoaded() === true;
     let ready = styleReady();
@@ -59,11 +68,11 @@ export const bindMapLibre = (map: MapLibreMapLike, input: DescriptionSource, opt
         const sourceId = `${PREFIX}${description.id}`;
         const templates = options.layers?.(description) ?? defaultTemplates(description);
         const layers = layerSpecs(description, templates, sourceId);
-        map.addSource(sourceId, sourceSpec(description.source));
+        map.addSource(sourceId, sourceSpec(description.source, baseUrl));
         order = [];
         const at = before !== undefined && map.getLayer(before) ? before : anchor();
         for (const layer of layers) map.addLayer(layer, at);
-        return { description, sourceId, templates, layers };
+        return { description, sourceId, templates, layers, tiles: tileUrls(description.source, baseUrl) };
     };
 
     const replace = (entry: Entry, description: LayerDescription): Entry => {
@@ -82,13 +91,15 @@ export const bindMapLibre = (map: MapLibreMapLike, input: DescriptionSource, opt
         const previous = entry.description.source;
         const source = map.getSource(entry.sourceId) as LiveSource | undefined;
         if (!source || previous.type !== next.source.type || previous.attribution !== next.source.attribution) return false;
-        const tiles = tileUrls(next.source);
-        if (tiles && source.setTiles && (previous.type !== 'wms-tiles' || next.source.type !== 'wms-tiles' || previous.tileSize === next.source.tileSize)) {
-            if (!sameTiles(source.tiles, tiles)) source.setTiles(tiles);
+        const tiles = tileUrls(next.source, baseUrl);
+        const sameSize = previous.type !== 'wms-tiles' || next.source.type !== 'wms-tiles' || previous.tileSize === next.source.tileSize;
+        if (tiles && entry.tiles && source.setTiles && sameSize) {
+            if (!sameTiles(Array.isArray(source.tiles) ? source.tiles : entry.tiles, tiles)) source.setTiles(tiles);
+            entry.tiles = tiles;
             return true;
         }
         if (next.source.type === 'geojson' && source.setData) {
-            source.setData(next.source.data ?? next.source.url);
+            source.setData(sourceData(next.source, baseUrl));
             return true;
         }
         return false;
@@ -130,6 +141,12 @@ export const bindMapLibre = (map: MapLibreMapLike, input: DescriptionSource, opt
             const entry = entries.get(description.id);
             if (!entry) {
                 entries.set(description.id, add(description));
+                stale.delete(description.id);
+                continue;
+            }
+            if (stale.has(description.id)) {
+                entries.set(description.id, replace(entry, description));
+                stale.delete(description.id);
                 continue;
             }
             if (entry.description.key !== description.key || !sameZoom(entry.description, description)) {
@@ -146,6 +163,7 @@ export const bindMapLibre = (map: MapLibreMapLike, input: DescriptionSource, opt
             drop(entry);
             entries.delete(id);
         }
+        stale.clear();
         reorder();
     };
 
@@ -164,7 +182,7 @@ export const bindMapLibre = (map: MapLibreMapLike, input: DescriptionSource, opt
         }
     };
 
-    const refresh = (force: boolean): void => {
+    const recover = (force: boolean): void => {
         if (!ready && !(force || styleReady())) return;
         ready = true;
         let lost = false;
@@ -177,15 +195,15 @@ export const bindMapLibre = (map: MapLibreMapLike, input: DescriptionSource, opt
         if (lost || pending) sync();
     };
 
-    const onLoad = (): void => refresh(true);
-    const onData = (): void => refresh(false);
+    const onLoad = (): void => recover(true);
+    const onData = (): void => recover(false);
     map.on('style.load', onLoad);
     map.on('load', onLoad);
     map.on('styledata', onData);
     map.on('idle', onData);
     sync();
     const unsubscribe = input.subscribe(sync);
-    return () => {
+    const stop = (): void => {
         unsubscribe();
         map.off('style.load', onLoad);
         map.off('load', onLoad);
@@ -194,4 +212,10 @@ export const bindMapLibre = (map: MapLibreMapLike, input: DescriptionSource, opt
         if (ready) for (const entry of entries.values()) drop(entry);
         entries.clear();
     };
+    const refresh = (id?: string): void => {
+        const ids = id === undefined ? [...entries.keys()] : [id];
+        for (const item of ids) if (entries.has(item)) stale.add(item);
+        if (stale.size > 0) sync();
+    };
+    return Object.assign(stop, { refresh });
 };

@@ -1,4 +1,6 @@
-export { defineCatalog } from './define.js';
+export { defineCatalog, defineLayer } from './define.js';
+export { createLiveCatalog, isLiveCatalog } from './live.js';
+export type { LiveCatalog } from './live.js';
 export { enrichFromCapabilities } from './enrich.js';
 export { CatalogError } from './validate.js';
 export { createLayerState, INITIAL_CQL_FRAGMENT } from './state.js';
@@ -20,6 +22,7 @@ export type {
     Catalog,
     CrossOrigin,
     DimensionDef,
+    GeometryType,
     LayerCapability,
     LayerDef,
     LayerKind,

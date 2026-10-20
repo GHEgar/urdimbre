@@ -140,3 +140,27 @@ describe('bindArbiter for OpenLayers', () => {
         expect(click).toHaveBeenCalledOnce();
     });
 });
+
+describe('bindOl refresh', () => {
+    it('rebuilds a layer in its place and leaves the others', () => {
+        const map = new OlMap({ view: new View({ center: [0, 0], zoom: 2 }) });
+        const state = createLayerState(catalog, { active: ['states', 'osm'] });
+        const createLayer = vi.fn(() => null);
+        const binding = bindOl(map, describeState(catalog, state), { createLayer });
+        const layers = () => map.getLayers().getArray();
+        const [states, osm] = layers();
+        createLayer.mockClear();
+        binding.refresh('osm');
+        expect(createLayer).toHaveBeenCalledTimes(1);
+        expect(layers()[0]).toBe(states);
+        expect(layers()[1]).not.toBe(osm);
+        expect(layers()[1]?.get(ID_PROPERTY)).toBe('osm');
+        expect(layers()[1]?.getZIndex()).toBe(osm?.getZIndex());
+        binding.refresh('parcels');
+        expect(createLayer).toHaveBeenCalledTimes(1);
+        binding.refresh();
+        expect(createLayer).toHaveBeenCalledTimes(3);
+        binding();
+        expect(layers()).toEqual([]);
+    });
+});
